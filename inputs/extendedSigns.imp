@@ -1,0 +1,47 @@
+class extendedSigns {
+    basic() {
+        def a = 5;
+        def b = -3;
+        def c = 0;
+
+        def sum1 = a + b;   // NON_ZERO (car 5 + (-3) = 2)
+        def sum2 = a + c;   // POSITIVE (car 5 + 0 = 5)
+        def sum3 = b + c;   // NEGATIVE (car -3 + 0 = -3)
+
+        def mul1 = a * b;   // NEGATIVE (car 5 * -3 = -15)
+        def mul2 = a * c;   // ZERO (car 5 * 0 = 0)
+        def mul3 = b * c;   // ZERO (car -3 * 0 = 0)
+    }
+
+    division() {
+        def x = 10;
+        def y = -2;
+        def z = 0;
+
+        def div1 = x / y;
+        def div2 = y / x;
+        def div3 = x / z;
+    }
+
+    loop(a) {
+        def x = 0;  // ZERO
+        while (x < a) {
+            x = x + 1;
+        }
+    }
+
+    conditional() {
+        def i = 0;
+        def j = 1;
+
+        if (i > 1) {
+            i = 1;
+            j = 2;
+        }
+
+        if (i > 1) {
+            i = i + 1;
+            j = j + 2;
+        }
+    }
+}
