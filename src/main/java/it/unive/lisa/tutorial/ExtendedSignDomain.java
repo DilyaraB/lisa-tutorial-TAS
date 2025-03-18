@@ -72,26 +72,96 @@ public class ExtendedSignDomain implements BaseNonRelationalValueDomain<Extended
     }
 
     @Override
-    public ExtendedSignDomain evalBinaryExpression(BinaryOperator operator, ExtendedSignDomain left, ExtendedSignDomain right, ProgramPoint pp, SemanticOracle oracle) {
-        if (operator instanceof AdditionOperator) {
-            if (left == TOP || right == TOP) return TOP;
-            if (left == BOTTOM || right == BOTTOM) return BOTTOM;
-            if (left == ZERO) return right;
-            if (right == ZERO) return left;
-            return getInstance(Sign.lub(left.sign, right.sign));
-        }
-        if (operator instanceof SubtractionOperator) {
-            if (right == ZERO) return left;
-            return getInstance(Sign.lub(left.sign, right.sign));
-        }
-        if (operator instanceof MultiplicationOperator) {
-            return getInstance(Sign.multiply(left.sign, right.sign));
-        }
-        if (operator instanceof DivisionOperator) {
-            if (right == ZERO) return BOTTOM;
-            return getInstance(Sign.multiply(left.sign, right.sign));
+    public ExtendedSignDomain evalNonNullConstant(Constant constant, ProgramPoint pp, SemanticOracle oracle) {
+        if (constant.getValue() instanceof Integer) {
+            int value = (Integer) constant.getValue();
+            if (value > 0) return POSITIVE;
+            if (value < 0) return NEGATIVE;
+            return ZERO;
         }
         return TOP;
+    }
+
+    @Override
+        public ExtendedSignDomain evalBinaryExpression(BinaryOperator operator, ExtendedSignDomain left, ExtendedSignDomain right, ProgramPoint pp, SemanticOracle oracle) {
+            if (left == TOP || right == TOP) return TOP;
+            if (left == BOTTOM || right == BOTTOM) return BOTTOM;
+
+            //Gestion de l'addition
+            if (operator instanceof AdditionOperator) {
+                if (left == ZERO_NEGATIVE && right == ZERO_NEGATIVE ) {
+                    return ZERO_NEGATIVE ;
+                }
+                else if (left == NEGATIVE || left == ZERO_NEGATIVE) {
+                    if (right == NEGATIVE || right == ZERO_NEGATIVE || right == ZERO ) return NEGATIVE;
+                    return TOP;
+                } else if (left == ZERO_POSITIVE && right == ZERO_POSITIVE ) {
+                    return ZERO_POSITIVE ;
+                }else if (left == POSITIVE || left == ZERO_POSITIVE) {
+                    if (right == POSITIVE || right == ZERO_POSITIVE || right == ZERO) return POSITIVE;
+                    return TOP;
+                } else if (left == ZERO) {
+                    return right;
+                }
+                return TOP;
+            }
+
+            //Gestion de la soustraction
+            if (operator instanceof SubtractionOperator) {
+                if (left == NEGATIVE) {
+                    if (right == POSITIVE || right == ZERO_POSITIVE || right == ZERO) return NEGATIVE;
+                    return TOP;
+                } else if (left == POSITIVE) {
+                    if (right == NEGATIVE || right == ZERO_NEGATIVE || right == ZERO) return POSITIVE;
+                    return TOP;
+                } else if (left == ZERO) {
+                    return right.negate();
+                } else if (left == ZERO_NEGATIVE) {
+                    if (right == ZERO_POSITIVE) return ZERO_NEGATIVE;
+                    return right.negate();
+                } else if (left == ZERO_POSITIVE) {
+                    if (right == ZERO_NEGATIVE) return ZERO_POSITIVE;
+                    return right.negate();
+                }
+                return TOP;
+            }
+
+        //Gestion de la multiplication (*) et Gestion de la division (/)
+        if (operator instanceof MultiplicationOperator || operator instanceof DivisionOperator) {
+            if (right == ZERO && operator instanceof DivisionOperator) return BOTTOM;
+            if (left == ZERO || right == ZERO) return ZERO;
+            if (left == POSITIVE) return right;
+            if (right == POSITIVE) return left;
+            if (left == NEGATIVE) return right.negate();
+            if (right == NEGATIVE) return left.negate();
+            //0 * -9 = -9; -9 * -1 = 9; -9 * 0 = 0; -9 * 1= -9;
+            if (left == ZERO_NEGATIVE) {
+                if (right == ZERO_NEGATIVE) return ZERO_POSITIVE;
+                return ZERO_NEGATIVE;
+            }
+            if (left == ZERO_POSITIVE) {
+                if (right == ZERO_NEGATIVE) return ZERO_NEGATIVE;
+                return ZERO_POSITIVE;
+            }
+            return TOP;
+        }
+
+        return TOP;
+    }
+
+    public ExtendedSignDomain negate() {
+        switch (this.sign) {
+            case POSITIVE:
+                return NEGATIVE;
+            case NEGATIVE:
+                return POSITIVE;
+            case ZERO_NEGATIVE:
+                return ZERO_POSITIVE;
+            case ZERO_POSITIVE:
+                return ZERO_NEGATIVE;
+            default:
+                return this;
+        }
     }
 
     public enum Sign {
