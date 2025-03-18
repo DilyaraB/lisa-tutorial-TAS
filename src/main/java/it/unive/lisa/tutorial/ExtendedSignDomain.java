@@ -12,8 +12,7 @@ import it.unive.lisa.symbolic.value.operator.AdditionOperator;
 import it.unive.lisa.symbolic.value.operator.DivisionOperator;
 import it.unive.lisa.symbolic.value.operator.MultiplicationOperator;
 import it.unive.lisa.symbolic.value.operator.SubtractionOperator;
-import it.unive.lisa.symbolic.value.operator.binary.BinaryOperator;
-import it.unive.lisa.symbolic.value.operator.binary.ComparisonLt;
+import it.unive.lisa.symbolic.value.operator.binary.*;
 import it.unive.lisa.util.representation.StringRepresentation;
 import it.unive.lisa.util.representation.StructuredRepresentation;
 
@@ -77,7 +76,7 @@ public class ExtendedSignDomain implements BaseNonRelationalValueDomain<Extended
             int value = (Integer) constant.getValue();
             if (value > 0) return POSITIVE;
             if (value < 0) return NEGATIVE;
-            return ZERO;
+            return ZERO_POSITIVE;
         }
         return TOP;
     }
@@ -134,7 +133,6 @@ public class ExtendedSignDomain implements BaseNonRelationalValueDomain<Extended
             if (right == POSITIVE) return left;
             if (left == NEGATIVE) return right.negate();
             if (right == NEGATIVE) return left.negate();
-            //0 * -9 = -9; -9 * -1 = 9; -9 * 0 = 0; -9 * 1= -9;
             if (left == ZERO_NEGATIVE) {
                 if (right == ZERO_NEGATIVE) return ZERO_POSITIVE;
                 return ZERO_NEGATIVE;
@@ -147,6 +145,129 @@ public class ExtendedSignDomain implements BaseNonRelationalValueDomain<Extended
         }
 
         return TOP;
+    }
+
+    @Override
+    public Satisfiability satisfiesBinaryExpression(BinaryOperator operator, ExtendedSignDomain left, ExtendedSignDomain right, ProgramPoint pp, SemanticOracle oracle) {
+        if (left == TOP || right == TOP) return Satisfiability.UNKNOWN;
+
+        if (operator instanceof ComparisonEq) {
+            if (left == right) return Satisfiability.SATISFIED;
+            if (left.isDisjoint(right)) return Satisfiability.NOT_SATISFIED;
+            return Satisfiability.UNKNOWN;
+        }
+
+        if (operator instanceof ComparisonNe) {
+            if (left == right) return Satisfiability.NOT_SATISFIED;
+            if (left.isDisjoint(right)) return Satisfiability.SATISFIED;
+            return Satisfiability.UNKNOWN;
+        }
+
+        if (operator instanceof ComparisonLt) { // <
+            if (left == right) return Satisfiability.NOT_SATISFIED;
+            return isLessThan(left, right);
+        }
+
+        if (operator instanceof ComparisonLe) { // <=
+            if (left == right) return Satisfiability.SATISFIED;
+            return isLessThan(left, right);
+        }
+
+        if (operator instanceof ComparisonGt) { // >
+            return satisfiesBinaryExpression(ComparisonLt.INSTANCE, right, left, pp, oracle);
+        }
+
+        if (operator instanceof ComparisonGe) { // >=
+            return satisfiesBinaryExpression(ComparisonLe.INSTANCE, right, left, pp, oracle);
+        }
+
+        return Satisfiability.UNKNOWN;
+    }
+
+    @Override
+    public ValueEnvironment<ExtendedSignDomain> assumeBinaryExpression(ValueEnvironment<ExtendedSignDomain> environment, BinaryOperator operator, ValueExpression left, ValueExpression right, ProgramPoint src, ProgramPoint dest, SemanticOracle oracle) {
+        if (!(left instanceof Variable) || !(right instanceof Constant)) return environment;
+
+        Variable x = (Variable) left;
+        Constant y = (Constant) right;
+
+        if (!(y.getValue() instanceof Integer)) return environment;
+        int value = (Integer) y.getValue();
+
+        if (operator == ComparisonGt.INSTANCE) {
+            // x > value && value >= 0
+            if (value >= 0) {
+                environment.putState(x, POSITIVE);
+            } else {
+                // x > value && value < 0
+                environment.putState(x, ZERO_POSITIVE);
+            }
+            return environment;
+        }
+
+        if (operator == ComparisonLt.INSTANCE) {
+            // x < value && value > 0
+            if (value > 0) {
+                environment.putState(x, ZERO_NEGATIVE);
+            } else {
+                // x < value && value <= 0
+                environment.putState(x, NEGATIVE);
+            }
+            return environment;
+        }
+
+        if (operator == ComparisonGe.INSTANCE) {
+            // x >= value && value > 0
+            if (value >= 0) {
+                environment.putState(x, ZERO_POSITIVE);
+            } else {
+                // x >= value && value < 0
+
+            }
+            return environment;
+        }
+
+        if (operator == ComparisonLe.INSTANCE) {
+            // x <= value && value <= 0
+            if (value <= 0) {
+                environment.putState(x, ZERO_NEGATIVE);
+            } else {
+                // x <= value && value > 0
+
+            }
+            return environment;
+        }
+
+        return environment;
+    }
+
+    public boolean isDisjoint(ExtendedSignDomain other) {
+        if (this == TOP || other == TOP) return false; // TOP overlaps with everything
+        if (this == BOTTOM || other == BOTTOM) return true; // BOTTOM represents no values, so it’s disjoint from everything
+        return (this == POSITIVE && (other == NEGATIVE || other == ZERO_NEGATIVE)) ||
+                (this == NEGATIVE && (other == POSITIVE || other == ZERO_POSITIVE)) ||
+                (this == ZERO_NEGATIVE && other == POSITIVE) ||
+                (this == ZERO_POSITIVE && other == NEGATIVE);// Otherwise, they overlap
+    }
+
+    public Satisfiability isLessThan(ExtendedSignDomain left, ExtendedSignDomain right) {
+        if (left == NEGATIVE && (right == POSITIVE || right == ZERO_POSITIVE)) return Satisfiability.SATISFIED;
+        if (left == POSITIVE && (right == NEGATIVE || right == ZERO_NEGATIVE)) return Satisfiability.NOT_SATISFIED;
+        if (left == ZERO) {
+            if (right == POSITIVE || right == ZERO_POSITIVE) return Satisfiability.SATISFIED;
+            if (right == NEGATIVE || right == ZERO_NEGATIVE) return Satisfiability.NOT_SATISFIED;
+            return Satisfiability.UNKNOWN;
+        }
+        if (left == ZERO_NEGATIVE) {
+            if (right == POSITIVE || right == ZERO_POSITIVE) return Satisfiability.SATISFIED;
+            return Satisfiability.UNKNOWN;
+        }
+
+        if (left == ZERO_POSITIVE) {
+            if (right == NEGATIVE || right == ZERO_NEGATIVE) return Satisfiability.NOT_SATISFIED;
+            return Satisfiability.UNKNOWN;
+        }
+        return Satisfiability.UNKNOWN;
     }
 
     public ExtendedSignDomain negate() {

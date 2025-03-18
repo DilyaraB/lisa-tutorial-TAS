@@ -115,15 +115,16 @@ class extendedSigns {
         def div8 = 0 / -1;  // (0) / (-1) = ZERO_NEGATIVE
     }
 
-    /*loop(a) {
-        def x = 0;  // ZERO
+    loop() {
+        def x = 0;
+        def a = 5;
         while (x < a) {
             x = x + 1;
         }
     }
 
     conditional() {
-        def i = 0;
+        def i = -1;
         def j = 1;
 
         if (i > 1) {
@@ -131,9 +132,9 @@ class extendedSigns {
             j = 2;
         }
 
-        if (i > 1) {
+        if (i < 1) {
             i = i + 1;
             j = j + 2;
         }
-    }*/
+    }
 }
