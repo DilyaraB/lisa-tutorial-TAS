@@ -1,0 +1,140 @@
+class extendedSignsDomain {
+    testAddition() {
+        def a = -5;  // NEGATIVE
+        def b = 5;   // POSITIVE
+        def c = 0;   // ZERO
+        def d = -1;  // NEGATIVE
+        def e = 1;   // POSITIVE
+
+        // NEGATIVE + NEGATIVE = NEGATIVE
+        def sum1 = a + d;
+
+        // POSITIVE + POSITIVE = POSITIVE
+        def sum2 = b + e;
+
+        // NEGATIVE + POSITIVE = TOP
+        def sum3 = a + b;
+
+        // ZERO + POSITIVE = POSITIVE
+        def sum4 = c + b;
+
+        // ZERO + NEGATIVE = NEGATIVE
+        def sum5 = c + a;
+
+        // ZERO_NEGATIVE + ZERO_NEGATIVE = ZERO_NEGATIVE
+        def sum6 = -1 + -0;  // (-1) + (-0) = ZERO_NEGATIVE
+
+        // ZERO_POSITIVE + ZERO_POSITIVE = ZERO_POSITIVE
+        def sum7 = 1 + 0;  // (1) + (0) = ZERO_POSITIVE
+    }
+
+    testSubtraction() {
+        def a = -5;  // NEGATIVE
+        def b = 5;   // POSITIVE
+        def c = 0;   // ZERO
+        def d = -1;  // NEGATIVE
+        def e = 1;   // POSITIVE
+
+        // NEGATIVE - POSITIVE = NEGATIVE
+        def sub1 = a - b;
+
+        // POSITIVE - NEGATIVE = POSITIVE
+        def sub2 = b - a;
+
+        // ZERO - NEGATIVE = POSITIVE
+        def sub3 = c - a;
+
+        // ZERO - POSITIVE = NEGATIVE
+        def sub4 = c - b;
+
+        // NEGATIVE - NEGATIVE = TOP
+        def sub5 = a - d;
+
+        // ZERO_NEGATIVE - ZERO_POSITIVE = ZERO_NEGATIVE
+        def sub6 = -0 - 1;  // (-0) - (1) = ZERO_NEGATIVE
+
+        // ZERO_POSITIVE - ZERO_NEGATIVE = ZERO_POSITIVE
+        def sub7 = 0 - -1;  // (0) - (-1) = ZERO_POSITIVE
+    }
+
+    testMultiplication() {
+        def a = -5;  // NEGATIVE
+        def b = 5;   // POSITIVE
+        def c = 0;   // ZERO
+        def d = -1;  // NEGATIVE
+        def e = 1;   // POSITIVE
+
+        // POSITIVE * POSITIVE = POSITIVE
+        def mul1 = b * e;
+
+        // NEGATIVE * NEGATIVE = POSITIVE
+        def mul2 = a * d;
+
+        // NEGATIVE * POSITIVE = NEGATIVE
+        def mul3 = a * b;
+
+        // ZERO * NEGATIVE = ZERO
+        def mul4 = c * a;
+
+        // ZERO_NEGATIVE * ZERO_NEGATIVE = ZERO_POSITIVE
+        def mul5 = -0 * -1;  // (-0) * (-1) = ZERO_POSITIVE
+
+        // ZERO_POSITIVE * ZERO_NEGATIVE = ZERO_NEGATIVE
+        def mul6 = 0 * -1;  // (0) * (-1) = ZERO_NEGATIVE
+    }
+
+    testDivision() {
+        def a = -5;  // NEGATIVE
+        def b = 5;   // POSITIVE
+        def c = 0;   // ZERO
+        def d = -1;  // NEGATIVE
+        def e = 1;   // POSITIVE
+
+        // POSITIVE / POSITIVE = POSITIVE
+        def div1 = b / e;
+
+        // NEGATIVE / NEGATIVE = POSITIVE
+        def div2 = a / d;
+
+        // NEGATIVE / POSITIVE = NEGATIVE
+        def div3 = a / b;
+
+        // POSITIVE / NEGATIVE = NEGATIVE
+        def div4 = b / a;
+
+        // ZERO / POSITIVE = ZERO
+        def div5 = c / b;
+
+        // Division par zéro : BOTTOM
+        def div6 = a / c;
+
+        // ZERO_NEGATIVE / ZERO_POSITIVE = ZERO_NEGATIVE
+        def div7 = -0 / 1;  // (-0) / (1) = ZERO_NEGATIVE
+
+        // ZERO_POSITIVE / ZERO_NEGATIVE = ZERO_NEGATIVE
+        def div8 = 0 / -1;  // (0) / (-1) = ZERO_NEGATIVE
+    }
+
+    loop() {
+        def x = 0;
+        def a = 5;
+        while (x < a) {
+            x = x + 1;
+        }
+    }
+
+    conditional() {
+        def i = -1;
+        def j = 1;
+
+        if (i > 1) {
+            i = 1;
+            j = 2;
+        }
+
+        if (i < 1) {
+            i = i + 1;
+            j = j + 2;
+        }
+    }
+}

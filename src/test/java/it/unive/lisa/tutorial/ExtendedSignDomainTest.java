@@ -14,13 +14,13 @@ public class ExtendedSignDomainTest {
     @Test
     public void testExtendedSignDomain() throws ParsingException {
         // we parse the program to get the CFG representation of the code in it
-        Program program = IMPFrontend.processFile("inputs/extendedSigns.imp");
+        Program program = IMPFrontend.processFile("inputs/extendedSignsDomain.imp");
 
         // we build a new configuration for the analysis
         LiSAConfiguration conf = new DefaultConfiguration();
 
         // we specify where we want files to be generated
-        conf.workdir = "outputs/extendedSigns";
+        conf.workdir = "outputs/extendedSignsDomain";
 
         // we specify the visual format of the analysis results
         conf.analysisGraphs = LiSAConfiguration.GraphType.HTML;
