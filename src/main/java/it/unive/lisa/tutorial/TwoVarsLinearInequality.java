@@ -4,7 +4,6 @@ import it.unive.lisa.analysis.Lattice;
 import it.unive.lisa.analysis.ScopeToken;
 import it.unive.lisa.analysis.SemanticException;
 import it.unive.lisa.analysis.SemanticOracle;
-import it.unive.lisa.analysis.lattices.FunctionalLattice;
 import it.unive.lisa.analysis.lattices.Satisfiability;
 import it.unive.lisa.analysis.value.ValueDomain;
 import it.unive.lisa.program.cfg.ProgramPoint;
@@ -20,26 +19,33 @@ import it.unive.lisa.util.representation.StructuredRepresentation;
 import java.util.*;
 import java.util.function.Predicate;
 
-public class TwoVarsLinearInequality extends FunctionalLattice<TwoVarsLinearInequality, Identifier, TwoVarsLinearInequality.ConstraintSet> implements ValueDomain<TwoVarsLinearInequality> {
+public class TwoVarsLinearInequality implements ValueDomain<TwoVarsLinearInequality> {
+    private static final TwoVarsLinearInequality TOP = new TwoVarsLinearInequality(true);
+    private static final TwoVarsLinearInequality BOTTOM = new TwoVarsLinearInequality(false);
 
-    // Static constants for top and bottom
-    public static final TwoVarsLinearInequality TOP = new TwoVarsLinearInequality(
-            new ConstraintSet(Collections.emptySet())
-    );
-    private static final TwoVarsLinearInequality BOTTOM = new TwoVarsLinearInequality(
-            new ConstraintSet(Collections.singleton(new TwoVarsInequality(0, null, 0, null, -1))) // 0 <= -1
-    );
+    private final Set<TwoVarsInequality> constraints;
+    private final boolean isTop;
 
-    private final ConstraintSet constraintSet;
-
-    public TwoVarsLinearInequality() {
-        super(new ConstraintSet(Collections.emptySet()));
-        this.constraintSet = lattice; // Use the lattice passed to super()
+    private TwoVarsLinearInequality(boolean isTop) {
+        this.isTop = isTop;
+        this.constraints = isTop ? Collections.emptySet() : Collections.singleton(new TwoVarsInequality(0, null, 0, null, -1));
     }
 
-    private TwoVarsLinearInequality(ConstraintSet constraintSet) {
-        super(constraintSet);
-        this.constraintSet = constraintSet;
+    public TwoVarsLinearInequality(Set<TwoVarsInequality> constraints) {
+        this.isTop = false;
+        this.constraints = new HashSet<>(constraints);
+        complete();
+    }
+
+    public TwoVarsLinearInequality() {
+      this.isTop = false;
+      this.constraints = new HashSet<>();
+      complete(); // Apply closure to the empty set (which does nothing in this case)
+  }
+    
+    @Override
+    public TwoVarsLinearInequality top() {
+        return TOP;
     }
 
     @Override
@@ -48,95 +54,234 @@ public class TwoVarsLinearInequality extends FunctionalLattice<TwoVarsLinearIneq
     }
 
     @Override
-    public TwoVarsLinearInequality top() {
-        return TOP;
+    public boolean isTop() {
+        return isTop && constraints.isEmpty();
     }
 
     @Override
-    public ConstraintSet stateOfUnknown(Identifier key) {
-        return lattice.top();
+    public boolean isBottom() {
+        return !isTop && constraints.size() == 1 && constraints.iterator().next().c < 0 && constraints.iterator().next().a == 0 && constraints.iterator().next().b == 0;
     }
 
     @Override
-    public TwoVarsLinearInequality mk(ConstraintSet lattice, Map<Identifier, ConstraintSet> function) {
-        return new TwoVarsLinearInequality(lattice);
+    public TwoVarsLinearInequality lub(TwoVarsLinearInequality other) throws SemanticException {
+        if (isTop() || other.isTop()) return TOP;
+        if (isBottom()) return other;
+        if (other.isBottom()) return this;
+
+        Set<TwoVarsInequality> result = new HashSet<>(this.constraints);
+        result.addAll(other.constraints);
+        return new TwoVarsLinearInequality(eliminateRedundancies(result));
     }
 
     @Override
-    public TwoVarsLinearInequality lubAux(TwoVarsLinearInequality other) throws SemanticException {
-        return new TwoVarsLinearInequality(this.constraintSet.lub(other.constraintSet));
+    public TwoVarsLinearInequality glb(TwoVarsLinearInequality other) throws SemanticException {
+        if (isBottom() || other.isBottom()) return BOTTOM;
+        if (isTop()) return other;
+        if (other.isTop()) return this;
+
+        Set<TwoVarsInequality> result = new HashSet<>(this.constraints);
+        result.addAll(other.constraints);
+        return checkSatisfiability(result) ? new TwoVarsLinearInequality(result) : BOTTOM;
     }
 
     @Override
-    public boolean lessOrEqualAux(TwoVarsLinearInequality other) throws SemanticException {
-        return this.constraintSet.lessOrEqual(other.constraintSet);
+    public TwoVarsLinearInequality widening(TwoVarsLinearInequality other) throws SemanticException {
+        if (isBottom()) return other;
+        if (other.isBottom()) return this;
+        if (isTop() || other.isTop()) return TOP;
+
+        Set<TwoVarsInequality> result = new HashSet<>();
+        for (TwoVarsInequality c : this.constraints) {
+            if (other.satisfies(c)) result.add(c);
+        }
+        return new TwoVarsLinearInequality(eliminateRedundancies(result));
     }
 
     @Override
-    public TwoVarsLinearInequality wideningAux(TwoVarsLinearInequality other) throws SemanticException {
-        return new TwoVarsLinearInequality(this.constraintSet.widening(other.constraintSet));
+    public boolean lessOrEqual(TwoVarsLinearInequality other) throws SemanticException {
+        if (isBottom()) return true;
+        if (other.isTop()) return true;
+        if (isTop() && !other.isTop()) return false;
+
+        for (TwoVarsInequality c : this.constraints) {
+            if (!other.satisfies(c)) return false;
+        }
+        return true;
     }
 
     @Override
-    public TwoVarsLinearInequality glbAux(TwoVarsLinearInequality other) throws SemanticException {
-        return new TwoVarsLinearInequality(this.constraintSet.glb(other.constraintSet));
+    public TwoVarsLinearInequality assign(Identifier id, ValueExpression expression, ProgramPoint pp, SemanticOracle oracle) 
+            throws SemanticException {
+        if (isBottom()) return this;
+        if (isHeapIdentifier(id)) return this;
+
+        Set<TwoVarsInequality> newConstraints = project(id).constraints;
+        if (expression instanceof Identifier) {
+            Identifier exprId = (Identifier) expression;
+            if (!isHeapIdentifier(exprId)) {
+                newConstraints.add(new TwoVarsInequality(1, id, -1, exprId, 0));
+                newConstraints.add(new TwoVarsInequality(-1, id, 1, exprId, 0));
+            }
+        } else if (expression instanceof BinaryExpression) {
+            BinaryExpression bin = (BinaryExpression) expression;
+            if (bin.getOperator() instanceof AdditionOperator && bin.getLeft() instanceof Identifier && bin.getRight() instanceof Constant) {
+                Identifier left = (Identifier) bin.getLeft();
+                Constant right = (Constant) bin.getRight();
+                if (!isHeapIdentifier(left) && right.getValue() instanceof Integer) {
+                    int value = (Integer) right.getValue();
+                    newConstraints.add(new TwoVarsInequality(1, id, -1, left, value));
+                    newConstraints.add(new TwoVarsInequality(-1, id, 1, left, -value));
+                }
+            }
+        }
+        return checkSatisfiability(newConstraints) ? new TwoVarsLinearInequality(newConstraints) : BOTTOM;
     }
 
-
     @Override
-    public TwoVarsLinearInequality assign(Identifier id, ValueExpression expression, ProgramPoint pp, SemanticOracle oracle) throws SemanticException {
-        return null;
+    public TwoVarsLinearInequality smallStepSemantics(ValueExpression expression, ProgramPoint pp, SemanticOracle oracle) 
+            throws SemanticException {
+        // For a relational domain like TVPI, we typically don't modify the state 
+        // unless the expression provides new constraints, which is handled by assume or assign
+        return this;
     }
 
     @Override
-    public TwoVarsLinearInequality smallStepSemantics(ValueExpression expression, ProgramPoint pp, SemanticOracle oracle) throws SemanticException {
-        return null;
-    }
+    public TwoVarsLinearInequality assume(ValueExpression expression, ProgramPoint src, ProgramPoint dest, SemanticOracle oracle) 
+            throws SemanticException {
+        if (isBottom()) return this;
 
-    @Override
-    public TwoVarsLinearInequality assume(ValueExpression expression, ProgramPoint src, ProgramPoint dest, SemanticOracle oracle) throws SemanticException {
-        return null;
+        Set<TwoVarsInequality> newConstraints = new HashSet<>(constraints);
+        if (expression instanceof BinaryExpression) {
+            BinaryExpression bin = (BinaryExpression) expression;
+            BinaryOperator op = bin.getOperator();
+            Identifier left = bin.getLeft() instanceof Identifier ? (Identifier) bin.getLeft() : null;
+            Identifier right = bin.getRight() instanceof Identifier ? (Identifier) bin.getRight() : null;
+
+            if (left != null && right != null && !isHeapIdentifier(left) && !isHeapIdentifier(right)) {
+                if (op instanceof ComparisonLe) {
+                    newConstraints.add(new TwoVarsInequality(1, left, -1, right, 0));
+                } else if (op instanceof ComparisonGe) {
+                    newConstraints.add(new TwoVarsInequality(-1, left, 1, right, 0));
+                } else if (op instanceof ComparisonLt) {
+                    newConstraints.add(new TwoVarsInequality(1, left, -1, right, -1));
+                } else if (op instanceof ComparisonGt) {
+                    newConstraints.add(new TwoVarsInequality(-1, left, 1, right, -1));
+                } else if (op instanceof ComparisonEq) {
+                    newConstraints.add(new TwoVarsInequality(1, left, -1, right, 0));
+                    newConstraints.add(new TwoVarsInequality(-1, left, 1, right, 0));
+                }
+            }
+        }
+        return checkSatisfiability(newConstraints) ? new TwoVarsLinearInequality(newConstraints) : BOTTOM;
     }
 
     @Override
     public boolean knowsIdentifier(Identifier id) {
-        return false;
+        if (isTop() || isBottom() || isHeapIdentifier(id)) {
+            return false; // TOP and BOTTOM don't "know" any specific identifier, and we ignore heap identifiers
+        }
+        for (TwoVarsInequality c : constraints) {
+            if ((c.x != null && c.x.equals(id)) || (c.y != null && c.y.equals(id))) {
+                return true; // The identifier is present in at least one constraint
+            }
+        }
+        return false; // The identifier is not present in any constraint
     }
 
     @Override
     public TwoVarsLinearInequality forgetIdentifier(Identifier id) throws SemanticException {
-        return null;
+        if (isTop() || isBottom() || isHeapIdentifier(id)) return this;
+        return new TwoVarsLinearInequality(project(id).constraints);
     }
 
     @Override
     public TwoVarsLinearInequality forgetIdentifiersIf(Predicate<Identifier> test) throws SemanticException {
-        return null;
+        if (isTop() || isBottom()) {
+            return this; // No change for TOP or BOTTOM
+        }
+
+        Set<TwoVarsInequality> newConstraints = new HashSet<>();
+        for (TwoVarsInequality c : constraints) {
+            // Keep the constraint if neither x nor y satisfies the predicate
+            if ((c.x == null || !test.test(c.x)) && (c.y == null || !test.test(c.y))) {
+                newConstraints.add(c);
+            }
+        }
+        return new TwoVarsLinearInequality(newConstraints);
     }
 
     @Override
-    public Satisfiability satisfies(ValueExpression expression, ProgramPoint pp, SemanticOracle oracle) throws SemanticException {
-        return null;
+    public Satisfiability satisfies(ValueExpression expression, ProgramPoint pp, SemanticOracle oracle) 
+            throws SemanticException {
+        // To be completed later for full satisfiability checking
+        return Satisfiability.UNKNOWN;
     }
 
     @Override
     public TwoVarsLinearInequality pushScope(ScopeToken token) throws SemanticException {
-        return null;
+        // For a simple relational domain, we don't modify the constraints when entering a scope
+        return this;
     }
 
     @Override
     public TwoVarsLinearInequality popScope(ScopeToken token) throws SemanticException {
-        return null;
+        // For a simple relational domain, we don't modify the constraints when exiting a scope
+        return this;
+    }
+
+    // Utility methods
+    private void complete() {
+        Set<TwoVarsInequality> closure = computeClosure(constraints);
+        constraints.clear();
+        constraints.addAll(closure);
+    }
+
+    private Set<TwoVarsInequality> computeClosure(Set<TwoVarsInequality> constraints) {
+        // To be completed with full closure computation
+        return new HashSet<>(constraints);
+    }
+
+    private Set<TwoVarsInequality> eliminateRedundancies(Set<TwoVarsInequality> constraints) {
+        // To be completed with redundancy elimination
+        return new HashSet<>(constraints);
+    }
+
+    private boolean checkSatisfiability(Set<TwoVarsInequality> constraints) {
+        // To be completed with full satisfiability checking
+        return true;
+    }
+
+    private TwoVarsLinearInequality project(Identifier id) {
+        Set<TwoVarsInequality> result = new HashSet<>();
+        for (TwoVarsInequality c : constraints) {
+            if ((c.x != null && c.x.equals(id)) || (c.y != null && c.y.equals(id))) continue;
+            result.add(c);
+        }
+        return new TwoVarsLinearInequality(result);
+    }
+
+    private boolean satisfies(TwoVarsInequality c) {
+        // To be completed with satisfiability checking
+        return true;
+    }
+
+    public static boolean isHeapIdentifier(Identifier id) {
+        if (id == null) return false;
+        String idStr = id.toString();
+        return idStr.contains("heap") || idStr.contains("this") || idStr.contains("&pp@");
     }
 
     @Override
     public StructuredRepresentation representation() {
-        return constraintSet.representation();
+        if (isTop()) return Lattice.topRepresentation();
+        if (isBottom()) return Lattice.bottomRepresentation();
+        return new StringRepresentation(constraints.toString());
     }
 
-    // Represents a single TVPI inequality: ax + by <= c
     public static class TwoVarsInequality {
         private final int a, b, c;
-        private final Identifier x, y; // null if variable is absent
+        private final Identifier x, y;
 
         public TwoVarsInequality(int a, Identifier x, int b, Identifier y, int c) {
             this.a = a;
@@ -150,8 +295,7 @@ public class TwoVarsLinearInequality extends FunctionalLattice<TwoVarsLinearIneq
         public String toString() {
             String left = "";
             if (a != 0) left += a + "*" + x;
-            if (b != 0)
-                left += (b > 0 && !left.isEmpty() ? " + " : b < 0 ? " - " : "") + Math.abs(b) + "*" + y;
+            if (b != 0) left += (b > 0 && !left.isEmpty() ? " + " : b < 0 ? " - " : "") + Math.abs(b) + "*" + y;
             return left + " <= " + c;
         }
 
@@ -160,110 +304,12 @@ public class TwoVarsLinearInequality extends FunctionalLattice<TwoVarsLinearIneq
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             TwoVarsInequality that = (TwoVarsInequality) o;
-            return a == that.a && b == that.b && c == that.c &&
-                    (Objects.equals(x, that.x)) &&
-                    (Objects.equals(y, that.y));
-        }
-    }
-
-    // Nested lattice for the constraint set
-    public static class ConstraintSet implements Lattice<ConstraintSet> {
-        private final Set<TwoVarsInequality> constraints;
-
-        public ConstraintSet(Set<TwoVarsInequality> constraints) {
-            this.constraints = constraints;
+            return a == that.a && b == that.b && c == that.c && Objects.equals(x, that.x) && Objects.equals(y, that.y);
         }
 
         @Override
-        public ConstraintSet top() {
-            return new ConstraintSet(Collections.emptySet());
-        }
-
-        // 0 <= -1
-        @Override
-        public ConstraintSet bottom() {
-            return new ConstraintSet(Collections.singleton(new TwoVarsInequality(0, null, 0, null, -1)));
-        }
-
-        @Override
-        public ConstraintSet lub(ConstraintSet other) throws SemanticException {
-            if (isBottom()) return other;
-            if (other.isBottom()) return this;
-            if (isTop() || other.isTop()) return top();
-
-            Set<TwoVarsInequality> result = new HashSet<>(this.constraints);
-            result.addAll(other.constraints);
-            return new ConstraintSet(eliminateRedundancies(result));
-        }
-
-        @Override
-        public ConstraintSet glb(ConstraintSet other) throws SemanticException {
-            if (isTop()) return other;
-            if (other.isTop()) return this;
-            if (isBottom() || other.isBottom()) return bottom();
-
-            Set<TwoVarsInequality> result = new HashSet<>(this.constraints);
-            result.addAll(other.constraints);
-            return checkSatisfiability(result) ? new ConstraintSet(result) : bottom();
-        }
-
-        @Override
-        public ConstraintSet widening(ConstraintSet other) throws SemanticException {
-            if (isBottom()) return other;
-            if (other.isBottom()) return this;
-            if (isTop() || other.isTop()) return top();
-
-            Set<TwoVarsInequality> result = new HashSet<>();
-            for (TwoVarsInequality c : this.constraints) {
-                if (other.satisfies(c)) result.add(c);
-            }
-            return new ConstraintSet(eliminateRedundancies(result));
-        }
-
-        @Override
-        public boolean lessOrEqual(ConstraintSet other) throws SemanticException {
-            if (isBottom()) return true;
-            if (other.isTop()) return true;
-            if (isTop() && !other.isTop()) return false;
-            if (other.isBottom() && !isBottom()) return false;
-
-            for (TwoVarsInequality c : this.constraints) {
-                if (!other.satisfies(c)) return false;
-            }
-            return true;
-        }
-
-        @Override
-        public boolean isTop() {
-            return constraints.isEmpty();
-        }
-
-        @Override
-        public boolean isBottom() {
-            if (constraints.size() == 1) {
-                TwoVarsInequality c = constraints.iterator().next();
-                return c.a == 0 && c.b == 0 && c.x == null && c.y == null && c.c < 0;
-            }
-            return false;
-        }
-
-        private Set<TwoVarsInequality> eliminateRedundancies(Set<TwoVarsInequality> constraints) {
-            return new HashSet<>(constraints); // TO DO
-        }
-
-        private boolean checkSatisfiability(Set<TwoVarsInequality> constraints) {
-            return true; // TO DO
-        }
-
-        private boolean satisfies(TwoVarsInequality c) {
-            return true; // TO DO
-        }
-
-        @Override
-        public StructuredRepresentation representation() {
-            if (isTop()) return Lattice.topRepresentation();
-            if (isBottom()) return Lattice.bottomRepresentation();
-            return new StringRepresentation(constraints.toString());
+        public int hashCode() {
+            return Objects.hash(a, b, c, x, y);
         }
     }
 }
