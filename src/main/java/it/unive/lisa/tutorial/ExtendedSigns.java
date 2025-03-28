@@ -196,6 +196,7 @@ public class ExtendedSigns implements BaseNonRelationalValueDomain<ExtendedSigns
 
   @Override
   public Satisfiability satisfiesBinaryExpression(BinaryOperator operator, ExtendedSigns left, ExtendedSigns right, ProgramPoint pp, SemanticOracle oracle) throws SemanticException {
+    System.out.println("-------in satisfiesBinaryExpression operator ----- " + operator);
     if (operator instanceof ComparisonEq) { // ==
       if (left == right) return Satisfiability.SATISFIED;
       if ((left == ZERO && right == POSITIVE) || (left == POSITIVE && right == ZERO)) return Satisfiability.NOT_SATISFIED;
@@ -231,6 +232,7 @@ public class ExtendedSigns implements BaseNonRelationalValueDomain<ExtendedSigns
 
   @Override
   public ValueEnvironment<ExtendedSigns> assumeBinaryExpression(ValueEnvironment<ExtendedSigns> environment, BinaryOperator operator, ValueExpression left, ValueExpression right, ProgramPoint src, ProgramPoint dest, SemanticOracle oracle) throws SemanticException {
+    System.out.println("-------in assumeBinaryExpression operator ----- " + operator);
     // Cas où l'identifiant est à gauche
     if (left instanceof Identifier) {
       Identifier id = (Identifier) left;
@@ -272,25 +274,25 @@ public class ExtendedSigns implements BaseNonRelationalValueDomain<ExtendedSigns
 
       if (operator instanceof ComparisonEq) { // left == x
         return environment.putState(id, leftVal);
-      } else if (operator instanceof ComparisonGt) { // x < left
+      } else if (operator instanceof ComparisonGt) { // left > x
         if (leftVal == POSITIVE) return environment.putState(id, LESS_OR_EQUAL_ZERO);
         if (leftVal == GREATER_OR_EQUAL_ZERO) return environment.putState(id, LESS_OR_EQUAL_ZERO);
         if (leftVal == ZERO) return environment.putState(id, NEGATIVE);
         if (leftVal == LESS_OR_EQUAL_ZERO) return environment.putState(id, NEGATIVE);
         if (leftVal == NEGATIVE) return environment.putState(id, NEGATIVE);
-      } else if (operator instanceof ComparisonLt) { // x > left
+      } else if (operator instanceof ComparisonLt) { // left < x
         if (leftVal == POSITIVE) return environment.putState(id, POSITIVE);
         if (leftVal == GREATER_OR_EQUAL_ZERO) return environment.putState(id, POSITIVE);
         if (leftVal == ZERO) return environment.putState(id, POSITIVE);
         if (leftVal == LESS_OR_EQUAL_ZERO) return environment.putState(id, GREATER_OR_EQUAL_ZERO);
         if (leftVal == NEGATIVE) return environment.putState(id, GREATER_OR_EQUAL_ZERO);
-      } else if (operator instanceof ComparisonGe) { // x <= left
+      } else if (operator instanceof ComparisonGe) { // left >= x
         if (leftVal == POSITIVE) return environment.putState(id, TOP);
         if (leftVal == GREATER_OR_EQUAL_ZERO) return environment.putState(id, TOP);
         if (leftVal == ZERO) return environment.putState(id, LESS_OR_EQUAL_ZERO);
         if (leftVal == LESS_OR_EQUAL_ZERO) return environment.putState(id, LESS_OR_EQUAL_ZERO);
         if (leftVal == NEGATIVE) return environment.putState(id, NEGATIVE);
-      } else if (operator instanceof ComparisonLe) { // x >= left
+      } else if (operator instanceof ComparisonLe) { // left <= x
         if (leftVal == POSITIVE) return environment.putState(id, POSITIVE);
         if (leftVal == GREATER_OR_EQUAL_ZERO) return environment.putState(id, GREATER_OR_EQUAL_ZERO);
         if (leftVal == ZERO) return environment.putState(id, GREATER_OR_EQUAL_ZERO);
@@ -300,5 +302,25 @@ public class ExtendedSigns implements BaseNonRelationalValueDomain<ExtendedSigns
     }
     
     return environment;
+  }
+
+  public static ExtendedSigns getZero(){
+    return ZERO;
+  }
+
+  public static ExtendedSigns getPositive(){
+    return POSITIVE;
+  }
+
+  public static ExtendedSigns getNegative(){
+    return NEGATIVE;
+  }
+
+  public static ExtendedSigns getLessOrEqualZero(){
+    return LESS_OR_EQUAL_ZERO;
+  }
+
+  public static ExtendedSigns getGreaterOrEqualZero(){
+    return GREATER_OR_EQUAL_ZERO;
   }
 }

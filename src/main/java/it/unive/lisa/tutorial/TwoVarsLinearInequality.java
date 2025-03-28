@@ -44,6 +44,10 @@ public class TwoVarsLinearInequality implements ValueDomain<TwoVarsLinearInequal
         complete(); // Apply closure to the empty set (which does nothing in this case)
     }
 
+    public Set<TwoVarsInequality> getConstraints() {
+        return constraints;
+    }
+
     @Override
     public TwoVarsLinearInequality top() {
         return TOP;
