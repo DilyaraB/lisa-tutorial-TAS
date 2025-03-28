@@ -9,6 +9,16 @@ class twoVarsLinearIneq {
         }
     }
 
+    testClosure(x) {
+        def y = x + 2;
+        if (y <= x + 1) {
+            def z = y;
+            if (z <= x) {
+                def w = z;
+            }
+        }
+    }
+
     // Test more complex relationships and projection
     /*complex(a) {
         def b = a + 1;    // b - a <= 1, a - b <= -1
