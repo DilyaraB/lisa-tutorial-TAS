@@ -18,7 +18,6 @@ public class TwoVarsLinearInequalityTest {
         // we parse the program to get the CFG representation of the code in it
         Program program = IMPFrontend.processFile("inputs/twoVarsLinearIneq.imp");
 
-
         // we build a new configuration for the analysis
         LiSAConfiguration conf = new DefaultConfiguration();
 

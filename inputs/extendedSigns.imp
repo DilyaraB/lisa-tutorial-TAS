@@ -7,25 +7,28 @@ class extendedSigns {
         def e = 1;   // POSITIVE
 
         // NEGATIVE + NEGATIVE = NEGATIVE
-        def sum1 = a + d;  // -5 + (-1) = -6 -> NEGATIVE
+        def sum1 = a + d;  // (-5) + (-1) = -6 -> NEGATIVE
 
         // POSITIVE + POSITIVE = POSITIVE
         def sum2 = b + e;  // 5 + 1 = 6 -> POSITIVE
 
         // NEGATIVE + POSITIVE = TOP
-        def sum3 = a + b;  // -5 + 5 = 0, mais abstraction -> TOP (car signe ambigu)
+        def sum3 = a + b;  // (-5) + 5 = 0, mais abstraction -> TOP (car signe ambigu)
+        
+        // POSITIVE + NEGATIVE = TOP
+        def sum4 = b + d;  // 5 + (-1) = 4, mais abstraction -> TOP (car signe ambigu)
 
         // ZERO + POSITIVE = POSITIVE
-        def sum4 = c + b;  // 0 + 5 = 5 -> POSITIVE
+        def sum5 = c + b;  // 0 + 5 = 5 -> POSITIVE
 
         // ZERO + NEGATIVE = NEGATIVE
-        def sum5 = c + a;  // 0 + (-5) = -5 -> NEGATIVE
+        def sum6 = c + a;  // 0 + (-5) = -5 -> NEGATIVE
 
         // NEGATIVE + ZERO = NEGATIVE
-        def sum6 = -1 + -0;  // -1 + 0 = -1 -> NEGATIVE
+        def sum7 = d + c;  // (-1) + 0 = -1 -> NEGATIVE
 
         // POSITIVE + ZERO = POSITIVE
-        def sum7 = 1 + 0;  // 1 + 0 = 1 -> POSITIVE
+        def sum8 = e + c;  // 1 + 0 = 1 -> POSITIVE
     }
 
     testSubtraction() {
@@ -36,7 +39,7 @@ class extendedSigns {
         def e = 1;   // POSITIVE
 
         // NEGATIVE - POSITIVE = NEGATIVE
-        def sub1 = a - b;  // -5 - 5 = -10 -> NEGATIVE
+        def sub1 = a - b;  // (-5) - 5 = -10 -> NEGATIVE
 
         // POSITIVE - NEGATIVE = POSITIVE
         def sub2 = b - a;  // 5 - (-5) = 10 -> POSITIVE
@@ -48,13 +51,16 @@ class extendedSigns {
         def sub4 = c - b;  // 0 - 5 = -5 -> NEGATIVE
 
         // NEGATIVE - NEGATIVE = TOP
-        def sub5 = a - d;  // -5 - (-1) = -4, mais abstraction -> TOP (car signe ambigu)
+        def sub5 = a - d;  // (-5) - (-1) = -4, mais abstraction -> TOP (car signe ambigu)
+        
+        // POSITIVE - POSITIVE = TOP
+        def sub6 = b - e;  // 5 - 1 = 4, mais abstraction -> TOP (car signe ambigu)
 
-        // ZERO - POSITIVE = NEGATIVE
-        def sub6 = -0 - 1;  // 0 - 1 = -1 -> NEGATIVE
+        // POSITIVE - ZERO = POSITIVE
+        def sub7 = e - c;  // 1 - 0 = 1 -> POSITIVE
 
-        // ZERO - NEGATIVE = POSITIVE
-        def sub7 = 0 - -1;  // 0 - (-1) = 1 -> POSITIVE
+        // NEGATIVE - ZERO = NEGATIVE
+        def sub8 = d - c;  // (-1) - 0 = -1 -> NEGATIVE
     }
 
     testMultiplication() {
@@ -68,19 +74,25 @@ class extendedSigns {
         def mul1 = b * e;  // 5 * 1 = 5 -> POSITIVE
 
         // NEGATIVE * NEGATIVE = POSITIVE
-        def mul2 = a * d;  // -5 * (-1) = 5 -> POSITIVE
+        def mul2 = a * d;  // (-5) * (-1) = 5 -> POSITIVE
 
+        // POSITIVE * NEGATIVE = NEGATIVE
+        def mul3 = b * a;  // 5 * (-5) = -25 -> NEGATIVE
+        
         // NEGATIVE * POSITIVE = NEGATIVE
-        def mul3 = a * b;  // -5 * 5 = -25 -> NEGATIVE
+        def mul4 = a * b;  // (-5) * 5 = -25 -> NEGATIVE
+        
+        // ZERO * POSITIVE = ZERO
+        def mul5 = c * b;  // 0 * 5 = 0 -> ZERO
 
         // ZERO * NEGATIVE = ZERO
-        def mul4 = c * a;  // 0 * (-5) = 0 -> ZERO
+        def mul6 = c * d;  // 0 * (-1) = 0 -> ZERO
 
-        // ZERO * NEGATIVE = ZERO
-        def mul5 = -0 * -1;  // 0 * (-1) = 0 -> ZERO
-
-        // ZERO * NEGATIVE = ZERO
-        def mul6 = 0 * -1;  // 0 * (-1) = 0 -> ZERO
+        // POSITIVE * ZERO = ZERO
+        def mul7 = e * c;  // 1 * 0 = 0 -> ZERO
+        
+        // NEGATIVE * ZERO = ZERO
+        def mul8 = a * c;  // (-5) * 0 = 0 -> ZERO
     }
 
     testDivision() {
@@ -94,56 +106,68 @@ class extendedSigns {
         def div1 = b / e;  // 5 / 1 = 5 -> POSITIVE
 
         // NEGATIVE / NEGATIVE = POSITIVE
-        def div2 = a / d;  // -5 / (-1) = 5 -> POSITIVE
+        def div2 = a / d;  // (-5) / (-1) = 5 -> POSITIVE
 
         // NEGATIVE / POSITIVE = NEGATIVE
-        def div3 = a / b;  // -5 / 5 = -1 -> NEGATIVE
+        def div3 = a / b;  // (-5) / 5 = -1 -> NEGATIVE
 
         // POSITIVE / NEGATIVE = NEGATIVE
         def div4 = b / a;  // 5 / (-5) = -1 -> NEGATIVE
 
         // ZERO / POSITIVE = ZERO
         def div5 = c / b;  // 0 / 5 = 0 -> ZERO
+        
+        // ZERO / NEGATIVE = ZERO
+        def div6 = c / d;  // 0 / (-1) = 0 -> ZERO
 
         // NEGATIVE / ZERO = BOTTOM
-        def div6 = a / c;  // -5 / 0 -> BOTTOM
-
-        // ZERO / POSITIVE = ZERO
-        def div7 = -0 / 1;  // 0 / 1 = 0 -> ZERO
-
-        // ZERO / NEGATIVE = ZERO
-        def div8 = 0 / -1;  // 0 / (-1) = 0 -> ZERO
+        def div7 = a / c;  // (-5) / 0 -> BOTTOM
+        
+        // POSITIVE / ZERO = BOTTOM
+        def div8 = b / c;  // 5 / 0 -> BOTTOM
     }
 
     loop() {
         def x = 0;  // ZERO
         def a = 5;  // POSITIVE
         while (x < a) {  // x < 5 : x commence à ZERO, puis augmente
-            x = x + 1;  // x devient POSITIVE après la première itération
-        }  // À la sortie : x = 5 -> POSITIVE
+            x = x + 1;  // x devient POSITIVE, POSITIVE < POSITIVE -> TOP
+        }  // A la sortie : x = 5 -> POSITIVE
     }
 
     conditional() {
         def i = -1;  // NEGATIVE
         def j = 1;   // POSITIVE
 
-        if (i > 1) {  // NEGATIVE > POSITIVE = NOT_SATISFIED, branche non prise
+        if (i > 1) {  // NEGATIVE > POSITIVE = NOT_SATISFIED, branche non prise -> BOTTOM
             i = 1;    // POSITIVE (non exécuté)
             j = 2;    // POSITIVE (non exécuté)
-        }  // i reste NEGATIVE, j reste POSITIVE
+        } // i reste NEGATIVE, j reste POSITIVE
 
         if (i < 1) {  // NEGATIVE < POSITIVE = SATISFIED, branche prise
             i = i + 1;  // NEGATIVE + POSITIVE = TOP
             j = j + 2;  // POSITIVE + POSITIVE = POSITIVE
-        }  // Après exécution : i = TOP, j = POSITIVE
+        } // Après exécution : i = TOP, j = POSITIVE
     }
     
-    branches(a, b) {
+    branche1(a, b) {
         def x = 0;  // ZERO
         if (a > b)  // Dépend des valeurs de a et b
             x = x * 7;  // ZERO * POSITIVE = ZERO
         else
             x = -7;  // NEGATIVE
-        def y = x / x;  // Après branchement : ZERO / ZERO = BOTTOM ou NEGATIVE / NEGATIVE = POSITIVE -> TOP (lub des deux branches)
+        def y = x / x;  // y après branchement : ZERO / ZERO = BOTTOM ou NEGATIVE / NEGATIVE = POSITIVE -> TOP (lub des deux branches)
+        				// x = ZERO ou x = NEGATIVE -> <=ZERO
+    }
+    
+    branche2(a, b) {
+        def x = 7;  // POSITIVE
+        if (a > b)  // Dépend des valeurs de a et b
+            x = x * 7;  // POSITIVE * POSITIVE = POSITIVE
+        else
+            x = -7;  // NEGATIVE
+        def y = x / x;  // y après branchement : POSITIVE / POSITIVE = POSITIVE ou NEGATIVE / NEGATIVE = POSITIVE -> POSITIVE (lub des deux branches)
+        				// Mais x = POSITIVE ou x = NEGATIVE -> TOP, évalué avant
+        				// Donc y = x / x = TOP / TOP -> TOP
     }
 }

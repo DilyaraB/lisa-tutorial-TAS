@@ -94,8 +94,8 @@ public class ExtendedSigns implements BaseNonRelationalValueDomain<ExtendedSigns
     if (other == BOTTOM) return this;
     if (this == TOP || other == TOP) return TOP;
 
-    if ((this == NEGATIVE && other == ZERO) || (this == ZERO && other == NEGATIVE)) return LESS_OR_EQUAL_ZERO;
     if ((this == POSITIVE && other == ZERO) || (this == ZERO && other == POSITIVE)) return GREATER_OR_EQUAL_ZERO;
+    if ((this == NEGATIVE && other == ZERO) || (this == ZERO && other == NEGATIVE)) return LESS_OR_EQUAL_ZERO;
     if ((this == NEGATIVE && other == POSITIVE) || (this == POSITIVE && other == NEGATIVE)) return TOP;
 
     return TOP;
@@ -186,6 +186,8 @@ public class ExtendedSigns implements BaseNonRelationalValueDomain<ExtendedSigns
       if (left == NEGATIVE && right == NEGATIVE) return POSITIVE;
       if ((left == POSITIVE && right == NEGATIVE) || (left == NEGATIVE && right == POSITIVE)) return NEGATIVE;
       if (left == GREATER_OR_EQUAL_ZERO && right == POSITIVE) return GREATER_OR_EQUAL_ZERO;
+      if (left == GREATER_OR_EQUAL_ZERO && right == NEGATIVE) return LESS_OR_EQUAL_ZERO;
+      if (left == LESS_OR_EQUAL_ZERO && right == POSITIVE) return LESS_OR_EQUAL_ZERO;
       if (left == LESS_OR_EQUAL_ZERO && right == NEGATIVE) return GREATER_OR_EQUAL_ZERO;
       return TOP;
     }
@@ -298,21 +300,5 @@ public class ExtendedSigns implements BaseNonRelationalValueDomain<ExtendedSigns
     }
     
     return environment;
-  }
-  
-  @Override
-  public ExtendedSigns wideningAux(ExtendedSigns other) throws SemanticException {
-    System.out.println("Widening: " + this.representation() + " widened with " + other.representation());
-    if (this == ZERO && other == POSITIVE) {
-      System.out.println("Result: POSITIVE");
-      return POSITIVE;
-    }
-    if (this == LESS_OR_EQUAL_ZERO && other == POSITIVE) {
-      System.out.println("Result: POSITIVE");
-      return POSITIVE;
-    }
-    ExtendedSigns result = lubAux(other);
-    System.out.println("Result (lub): " + result.representation());
-    return result;
   }
 }
