@@ -126,13 +126,29 @@ class extendedSigns {
         // POSITIVE / ZERO = BOTTOM
         def div8 = b / c;  // 5 / 0 -> BOTTOM
     }
+    
+    testGreaterOrLessThanZero(a, b) {
+    	def x = 0;
+    	def y = 0;
+    	if (a > b)
+    		x = 1;  // >=ZERO
+    	else
+    		y = -1; // <=ZERO
+        
+        def i = x+y; // >=ZERO + <=ZERO -> TOP
+        def j = y+x; // <=ZERO + >=ZERO -> TOP
+        def k = x-y; // >=ZERO - <=ZERO -> >=ZERO
+        def l = y-x; // <=ZERO - >=ZERO -> <=ZERO
+        def m = x*y; // >=ZERO * <=ZERO -> <=ZERO
+        def n = x/y; // >=ZERO / <=ZERO -> BOTTOM
+    }
 
     loop() {
         def x = 0;  // ZERO
         def a = 5;  // POSITIVE
         while (x < a) {  // x < 5 : x commence à ZERO, puis augmente
             x = x + 1;  // x devient POSITIVE, POSITIVE < POSITIVE -> TOP
-        }  // A la sortie : x = 5 -> POSITIVE
+        }  // A la sortie : x >= 5 -> POSITIVE
     }
 
     conditional() {
@@ -156,8 +172,8 @@ class extendedSigns {
             x = x * 7;  // ZERO * POSITIVE = ZERO
         else
             x = -7;  // NEGATIVE
-        def y = x / x;  // y après branchement : ZERO / ZERO = BOTTOM ou NEGATIVE / NEGATIVE = POSITIVE -> TOP (lub des deux branches)
-        				// x = ZERO ou x = NEGATIVE -> <=ZERO
+        def y = x / x;  // x = ZERO ou x = NEGATIVE -> <=ZERO
+        				// y = <=ZERO / <=ZERO -> BOTTOM
     }
     
     branche2(a, b) {
@@ -166,8 +182,7 @@ class extendedSigns {
             x = x * 7;  // POSITIVE * POSITIVE = POSITIVE
         else
             x = -7;  // NEGATIVE
-        def y = x / x;  // y après branchement : POSITIVE / POSITIVE = POSITIVE ou NEGATIVE / NEGATIVE = POSITIVE -> POSITIVE (lub des deux branches)
-        				// Mais x = POSITIVE ou x = NEGATIVE -> TOP, évalué avant
+        def y = x / x;  // x = POSITIVE ou x = NEGATIVE -> TOP
         				// Donc y = x / x = TOP / TOP -> TOP
     }
 }

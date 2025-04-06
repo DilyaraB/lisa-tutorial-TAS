@@ -21,10 +21,10 @@ import java.util.*;
 import java.util.function.Predicate;
 
 public class TwoVarsLinearInequality implements ValueDomain<TwoVarsLinearInequality> {
-    private static final TwoVarsLinearInequality TOP = new TwoVarsLinearInequality(true);
-    private static final TwoVarsLinearInequality BOTTOM = new TwoVarsLinearInequality(false);
+    static final TwoVarsLinearInequality TOP = new TwoVarsLinearInequality(true);
+    static final TwoVarsLinearInequality BOTTOM = new TwoVarsLinearInequality(false);
 
-    private final Set<TwoVarsInequality> constraints;
+    final Set<TwoVarsInequality> constraints;
     private final boolean isTop;
 
     private TwoVarsLinearInequality(boolean isTop) {
@@ -42,10 +42,6 @@ public class TwoVarsLinearInequality implements ValueDomain<TwoVarsLinearInequal
         this.isTop = false;
         this.constraints = new HashSet<>();
         complete(); // Apply closure to the empty set (which does nothing in this case)
-    }
-
-    public Set<TwoVarsInequality> getConstraints() {
-        return constraints;
     }
 
     @Override
@@ -355,8 +351,9 @@ public class TwoVarsLinearInequality implements ValueDomain<TwoVarsLinearInequal
     }
 
     public static class TwoVarsInequality {
-        private final int a, b, c;
-        private final Identifier x, y;
+        final int a, b, c;
+        final Identifier x;
+        final Identifier y;
 
         public TwoVarsInequality(int a, Identifier x, int b, Identifier y, int c) {
             this.a = a;

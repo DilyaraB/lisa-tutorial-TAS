@@ -29,13 +29,13 @@ import it.unive.lisa.util.representation.StructuredRepresentation;
 
 public class ExtendedSigns implements BaseNonRelationalValueDomain<ExtendedSigns> {
 
-  private static final ExtendedSigns BOTTOM = new ExtendedSigns(-10);
-  private static final ExtendedSigns NEGATIVE = new ExtendedSigns(-1);
-  private static final ExtendedSigns ZERO = new ExtendedSigns(0);
-  private static final ExtendedSigns POSITIVE = new ExtendedSigns(1);
-  private static final ExtendedSigns LESS_OR_EQUAL_ZERO = new ExtendedSigns(-2);
-  private static final ExtendedSigns GREATER_OR_EQUAL_ZERO = new ExtendedSigns(2);
-  private static final ExtendedSigns TOP = new ExtendedSigns(10);
+  static final ExtendedSigns BOTTOM = new ExtendedSigns(-10);
+  static final ExtendedSigns NEGATIVE = new ExtendedSigns(-1);
+  static final ExtendedSigns ZERO = new ExtendedSigns(0);
+  static final ExtendedSigns POSITIVE = new ExtendedSigns(1);
+  static final ExtendedSigns LESS_OR_EQUAL_ZERO = new ExtendedSigns(-2);
+  static final ExtendedSigns GREATER_OR_EQUAL_ZERO = new ExtendedSigns(2);
+  static final ExtendedSigns TOP = new ExtendedSigns(10);
 
   private final int extendedSign;
 
@@ -177,10 +177,11 @@ public class ExtendedSigns implements BaseNonRelationalValueDomain<ExtendedSigns
       if ((left == NEGATIVE && right == LESS_OR_EQUAL_ZERO) || (left == LESS_OR_EQUAL_ZERO && right == NEGATIVE)) return GREATER_OR_EQUAL_ZERO;
       if (left == GREATER_OR_EQUAL_ZERO && right == GREATER_OR_EQUAL_ZERO) return GREATER_OR_EQUAL_ZERO;
       if (left == LESS_OR_EQUAL_ZERO && right == LESS_OR_EQUAL_ZERO) return GREATER_OR_EQUAL_ZERO;
+      if ((left == GREATER_OR_EQUAL_ZERO && right == LESS_OR_EQUAL_ZERO) || (left == LESS_OR_EQUAL_ZERO && right == GREATER_OR_EQUAL_ZERO)) return LESS_OR_EQUAL_ZERO;
       return TOP;
 
     } else if (operator instanceof DivisionOperator) {
-      if (right == ZERO) return BOTTOM;
+      if (right == ZERO || right == GREATER_OR_EQUAL_ZERO || right == LESS_OR_EQUAL_ZERO) return BOTTOM;
       if (left == ZERO) return ZERO;
       if (left == POSITIVE && right == POSITIVE) return POSITIVE;
       if (left == NEGATIVE && right == NEGATIVE) return POSITIVE;
@@ -196,7 +197,6 @@ public class ExtendedSigns implements BaseNonRelationalValueDomain<ExtendedSigns
 
   @Override
   public Satisfiability satisfiesBinaryExpression(BinaryOperator operator, ExtendedSigns left, ExtendedSigns right, ProgramPoint pp, SemanticOracle oracle) throws SemanticException {
-    System.out.println("-------in satisfiesBinaryExpression operator ----- " + operator);
     if (operator instanceof ComparisonEq) { // ==
       if (left == right) return Satisfiability.SATISFIED;
       if ((left == ZERO && right == POSITIVE) || (left == POSITIVE && right == ZERO)) return Satisfiability.NOT_SATISFIED;
@@ -232,7 +232,6 @@ public class ExtendedSigns implements BaseNonRelationalValueDomain<ExtendedSigns
 
   @Override
   public ValueEnvironment<ExtendedSigns> assumeBinaryExpression(ValueEnvironment<ExtendedSigns> environment, BinaryOperator operator, ValueExpression left, ValueExpression right, ProgramPoint src, ProgramPoint dest, SemanticOracle oracle) throws SemanticException {
-    System.out.println("-------in assumeBinaryExpression operator ----- " + operator);
     // Cas où l'identifiant est à gauche
     if (left instanceof Identifier) {
       Identifier id = (Identifier) left;
@@ -302,25 +301,5 @@ public class ExtendedSigns implements BaseNonRelationalValueDomain<ExtendedSigns
     }
     
     return environment;
-  }
-
-  public static ExtendedSigns getZero(){
-    return ZERO;
-  }
-
-  public static ExtendedSigns getPositive(){
-    return POSITIVE;
-  }
-
-  public static ExtendedSigns getNegative(){
-    return NEGATIVE;
-  }
-
-  public static ExtendedSigns getLessOrEqualZero(){
-    return LESS_OR_EQUAL_ZERO;
-  }
-
-  public static ExtendedSigns getGreaterOrEqualZero(){
-    return GREATER_OR_EQUAL_ZERO;
   }
 }
