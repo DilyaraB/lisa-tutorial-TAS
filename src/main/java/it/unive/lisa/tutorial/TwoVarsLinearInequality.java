@@ -41,7 +41,7 @@ public class TwoVarsLinearInequality implements ValueDomain<TwoVarsLinearInequal
     public TwoVarsLinearInequality() {
         this.isTop = false;
         this.constraints = new HashSet<>();
-        complete(); // Apply closure to the empty set (which does nothing in this case)
+        complete();
     }
 
     @Override
@@ -67,8 +67,7 @@ public class TwoVarsLinearInequality implements ValueDomain<TwoVarsLinearInequal
     @Override
     public TwoVarsLinearInequality lub(TwoVarsLinearInequality other) throws SemanticException {
         if (isTop() || other.isTop()) return TOP;
-        if (isBottom()) return other;
-        if (other.isBottom()) return this;
+        if (isBottom() || other.isBottom()) return BOTTOM;
 
         Set<TwoVarsInequality> result = new HashSet<>(this.constraints);
         result.addAll(other.constraints);
@@ -136,14 +135,15 @@ public class TwoVarsLinearInequality implements ValueDomain<TwoVarsLinearInequal
                 }
             }
         }
-        return checkSatisfiability(newConstraints) ? new TwoVarsLinearInequality(newConstraints) : BOTTOM;
+        if (!checkSatisfiability(newConstraints)) {
+            return BOTTOM;
+        }
+        return new TwoVarsLinearInequality(newConstraints);
     }
 
     @Override
     public TwoVarsLinearInequality smallStepSemantics(ValueExpression expression, ProgramPoint pp, SemanticOracle oracle)
             throws SemanticException {
-        // For a relational domain like TVPI, we typically don't modify the state
-        // unless the expression provides new constraints, which is handled by assume or assign
         return this;
     }
 
@@ -177,42 +177,38 @@ public class TwoVarsLinearInequality implements ValueDomain<TwoVarsLinearInequal
                 if (!isHeapIdentifier(left) && !isHeapIdentifier(right)) {
                     if (op instanceof ComparisonLe) {
                         newConstraints.add(new TwoVarsInequality(1, left, -1, right, 0));
+                    } else if (op instanceof ComparisonGe) {
+                        newConstraints.add(new TwoVarsInequality(-1, left, 1, right, 0));
                     }
                 }
             }
         }
-        return checkSatisfiability(newConstraints) ? new TwoVarsLinearInequality(newConstraints) : BOTTOM;
+        if (!checkSatisfiability(newConstraints)) {
+            return BOTTOM;
+        }
+        return new TwoVarsLinearInequality(newConstraints);
     }
 
     @Override
     public boolean knowsIdentifier(Identifier id) {
-        if (isTop() || isBottom() || isHeapIdentifier(id)) {
-            return false; // TOP and BOTTOM don't "know" any specific identifier, and we ignore heap identifiers
-        }
+        if (isTop() || isBottom() || isHeapIdentifier(id)) return false;
         for (TwoVarsInequality c : constraints) {
-            if ((c.x != null && c.x.equals(id)) || (c.y != null && c.y.equals(id))) {
-                return true; // The identifier is present in at least one constraint
-            }
+            if ((c.x != null && c.x.equals(id)) || (c.y != null && c.y.equals(id))) return true;
         }
-        return false; // The identifier is not present in any constraint
+        return false;
     }
 
     @Override
     public TwoVarsLinearInequality forgetIdentifier(Identifier id) throws SemanticException {
-        System.out.println("Forgetting " + id);
         if (isTop() || isBottom() || isHeapIdentifier(id)) return this;
         return new TwoVarsLinearInequality(project(id).constraints);
     }
 
     @Override
     public TwoVarsLinearInequality forgetIdentifiersIf(Predicate<Identifier> test) throws SemanticException {
-        if (isTop() || isBottom()) {
-            return this; // No change for TOP or BOTTOM
-        }
-
+        if (isTop() || isBottom()) return this;
         Set<TwoVarsInequality> newConstraints = new HashSet<>();
         for (TwoVarsInequality c : constraints) {
-            // Keep the constraint if neither x nor y satisfies the predicate
             if ((c.x == null || !test.test(c.x)) && (c.y == null || !test.test(c.y))) {
                 newConstraints.add(c);
             }
@@ -223,23 +219,19 @@ public class TwoVarsLinearInequality implements ValueDomain<TwoVarsLinearInequal
     @Override
     public Satisfiability satisfies(ValueExpression expression, ProgramPoint pp, SemanticOracle oracle)
             throws SemanticException {
-        // To be completed later for full satisfiability checking
         return Satisfiability.UNKNOWN;
     }
 
     @Override
     public TwoVarsLinearInequality pushScope(ScopeToken token) throws SemanticException {
-        // For a simple relational domain, we don't modify the constraints when entering a scope
         return this;
     }
 
     @Override
     public TwoVarsLinearInequality popScope(ScopeToken token) throws SemanticException {
-        // For a simple relational domain, we don't modify the constraints when exiting a scope
         return this;
     }
 
-    // Utility methods
     private void complete() {
         Set<TwoVarsInequality> closure = computeClosure(constraints);
         constraints.clear();
@@ -247,38 +239,15 @@ public class TwoVarsLinearInequality implements ValueDomain<TwoVarsLinearInequal
     }
 
     private Set<TwoVarsInequality> computeClosure(Set<TwoVarsInequality> constraints) {
-        Set<TwoVarsInequality> closure = new HashSet<>(constraints);
-
-        // 1. Check for constant contradictions (x and y are null or a = 0 and b = 0)
+        Set<TwoVarsInequality> closure = eliminateRedundancies(constraints);
+        if (!checkSatisfiability(closure)) {
+            return Collections.singleton(new TwoVarsInequality(0, null, 0, null, -1));
+        }
         for (TwoVarsInequality c : closure) {
             if (c.a == 0 && c.b == 0 && c.x == null && c.y == null && c.c < 0) {
-                //Bottom
                 return Collections.singleton(new TwoVarsInequality(0, null, 0, null, -1));
             }
         }
-
-        // 2. Combine identical terms, keeps tighter one
-        // if there are x - y <= 5 and x - y <= 3 keeps x - y <= 3
-        Map<String, TwoVarsInequality> combined = new HashMap<>();
-        for (TwoVarsInequality c : closure) {
-            String key = (c.x != null ? c.x.toString() : "null") + "," +
-                    (c.y != null ? c.y.toString() : "null") + "," +
-                    c.a + "," + c.b;
-            if (combined.containsKey(key)) {
-                TwoVarsInequality existing = combined.get(key);
-                if (existing.c > c.c) {
-                    combined.put(key, c);
-                }
-            } else {
-                combined.put(key, c);
-            }
-        }
-        System.out.println("Combined map: " + combined.values());
-        closure.clear();
-        closure.addAll(combined.values());
-
-        // 3. Simple transitivity check with tighter-bound filter
-        // if there are constraints of form x - y <= 5 and y - z <= 3 this adds x - z <= 8 constraint
         Set<TwoVarsInequality> toAdd = new HashSet<>();
         for (TwoVarsInequality c1 : closure) {
             for (TwoVarsInequality c2 : closure) {
@@ -293,33 +262,71 @@ public class TwoVarsLinearInequality implements ValueDomain<TwoVarsLinearInequal
                         if (newA == 0 && newB == 0 && newX == null && newY == null && newC < 0) {
                             return Collections.singleton(new TwoVarsInequality(0, null, 0, null, -1));
                         }
-                        String key = (newX != null ? newX.toString() : "null") + "," +
-                                (newY != null ? newY.toString() : "null") + "," +
-                                newA + "," + newB;
-                        if (combined.containsKey(key)) {
-                            TwoVarsInequality existing = combined.get(key);
-                            if (existing.c > newC) {
-                                toAdd.add(derived);
-                            }
-                        } else {
-                            toAdd.add(derived);
+                        if (newX != null && newX.equals(newY) && newA + newB == 0 && newC < 0) {
+                            return Collections.singleton(new TwoVarsInequality(0, null, 0, null, -1));
                         }
+                        toAdd.add(derived);
                     }
                 }
             }
         }
-        System.out.println("To add from transitivity: " + toAdd);
         closure.addAll(toAdd);
+        closure = eliminateRedundancies(closure);
+        if (!checkSatisfiability(closure)) {
+            return Collections.singleton(new TwoVarsInequality(0, null, 0, null, -1));
+        }
         return closure;
     }
 
     private Set<TwoVarsInequality> eliminateRedundancies(Set<TwoVarsInequality> constraints) {
-        // To be completed with redundancy elimination
-        return new HashSet<>(constraints);
+        Map<String, TwoVarsInequality> tightened = new HashMap<>();
+        for (TwoVarsInequality c : constraints) {
+            String key = (c.x != null ? c.x.toString() : "null") + "," +
+                    (c.y != null ? c.y.toString() : "null") + "," +
+                    c.a + "," + c.b;
+            if (c.x != null && c.y != null && c.x.equals(c.y) && c.a + c.b == 0) {
+                if (c.c < 0) {
+                    return Collections.singleton(new TwoVarsInequality(0, null, 0, null, -1));
+                }
+                continue;
+            }
+            tightened.compute(key, (k, existing) -> {
+                if (existing == null) return c;
+                return existing.c <= c.c ? existing : c;
+            });
+        }
+        return new HashSet<>(tightened.values());
     }
 
     private boolean checkSatisfiability(Set<TwoVarsInequality> constraints) {
-        // To be completed with full satisfiability checking
+        for (TwoVarsInequality c1 : constraints) {
+            for (TwoVarsInequality c2 : constraints) {
+                if (c1.x != null && c1.y != null && c2.x != null && c2.y != null &&
+                        c1.x.equals(c2.y) && c1.y.equals(c2.x) &&
+                        c1.a == -c2.b && c1.b == -c2.a) {
+                    int sum = c1.c + c2.c;
+                    if (sum < 0) {
+                        return false;
+                    }
+                }
+                if (c1.x != null && c1.y != null && c2.x != null && c2.y != null &&
+                        c1.x.equals(c2.x) && c1.y.equals(c2.y) &&
+                        c1.a + c2.a == 0 && c1.b + c2.b == 0) {
+                    int sum = c1.c + c2.c;
+                    if (sum < 0) {
+                        return false;
+                    }
+                }
+                if (c1.x != null && c1.y != null && c1.x.equals(c1.y) && c1.a + c1.b == 0 && c1.c < 0) {
+                    return false;
+                }
+            }
+        }
+        for (TwoVarsInequality c : constraints) {
+            if (c.x == null && c.y == null && c.a == 0 && c.b == 0 && c.c < 0) {
+                return false;
+            }
+        }
         return true;
     }
 
@@ -333,7 +340,6 @@ public class TwoVarsLinearInequality implements ValueDomain<TwoVarsLinearInequal
     }
 
     private boolean satisfies(TwoVarsInequality c) {
-        // To be completed with satisfiability checking
         return true;
     }
 
@@ -345,8 +351,12 @@ public class TwoVarsLinearInequality implements ValueDomain<TwoVarsLinearInequal
 
     @Override
     public StructuredRepresentation representation() {
-        if (isTop()) return Lattice.topRepresentation();
-        if (isBottom()) return Lattice.bottomRepresentation();
+        if (isTop()) {
+            return Lattice.topRepresentation();
+        }
+        if (isBottom()) {
+            return Lattice.bottomRepresentation();
+        }
         return new StringRepresentation(constraints.toString());
     }
 

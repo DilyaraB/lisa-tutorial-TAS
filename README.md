@@ -164,11 +164,97 @@ Nous nous attendions au départ à ce que y soit POSITIVE, car x est soit POSITI
 
 ## Domaine Relationnel : `TwoVarsLinearInequality`
 
-(...)
+Le domaine `TwoVarsLinearInequality` (classe `TwoVarsLinearInequality.java`, package `it.unive.lisa.tutorial`) est une implémentation simplifiée du domaine relationnel **TVPI** (*Two Variables Per Inequality*). Il permet de représenter des relations de la forme :
+
+    a * x + b * y ≤ c
+
+où `x` et `y` sont des identifiants, `a`, `b` et `c` sont des constantes entières. Il capture ainsi des **relations linéaires entre deux variables** à chaque instant du programme.
+
+Ce domaine maintient un ensemble de contraintes linéaires, fermé par transitivité, pour capturer les relations entre paires de variables à chaque point du programme.
+
+### Fonctionnement
+
+### Représentation
+- Une contrainte est un objet `TwoVarsInequality` avec les champs `a`, `x`, `b`, `y`, `c`.
+- Exemple : `x - y ≤ 2` devient `1*x + (-1)*y ≤ 2` (soit `a=1`, `x=x`, `b=-1`, `y=y`, `c=2`).
+- L’état du domaine est :
+  - Un ensemble de telles contraintes (état normal).
+  - `TOP` : Toutes les valeurs possibles (ensemble vide de contraintes avec `isTop = true`).
+  - `BOTTOM` : État insatisfiable (singleton `{0 ≤ -1}`).
+
+### Opérations principales
+1. **Assignations (`assign`)**
+  - `x = y` : Ajoute `{x - y ≤ 0, y - x ≤ 0}`.
+  - `x = y + c` : Ajoute `{x - y ≤ c, y - x ≤ -c}`.
+  - Oublie les contraintes précédentes sur `x` via `project` avant d’ajouter les nouvelles.
+2. **Conditions (`assume`)**
+  - `x <= y` : Ajoute `{x - y ≤ 0}`.
+  - `x <= y + c` : Ajoute `{x - y ≤ c}`.
+3. **Fermeture transitive (`computeClosure`)**
+  - Si `x - y ≤ c1` et `y - z ≤ c2`, alors `x - z ≤ c1 + c2`.
+  - Vérifie la satisfiabilité et retourne `BOTTOM` si une contradiction est détectée.
+4. **Projection (`project`)**
+  - Supprime toutes les contraintes impliquant un identifiant donné.
+5. **Satisfiabilité (`checkSatisfiability`)**
+  - Détecte les contradictions (ex. `c - a ≤ 1` et `-c + a ≤ -2` → `0 ≤ -1`).
+6. **Élimination des redondances (`eliminateRedundancies`)**
+  - Garde la contrainte la plus restrictive pour chaque paire `(x, y, a, b)`.
 
 ### Tests et Résultats pour `twoVarsLinearIneq.imp`
 
-(À compléter avec les tests et résultats spécifiques au domaine relationnel.)
+Nous avons implémenté plusieurs tests pour évaluer notre domaine relationnel. Voici les résultats détaillés :
+
+#### Test 1 : `basic(x)`
+
+```java
+basic(x) {
+  def y = x + 1;
+  def z = y + 2;
+  if (x <= z) {
+    def w = z;
+  }
+}
+```
+
+Ligne | Contraintes ajoutées                                                                                                                                   | Explication
+--- |--------------------------------------------------------------------------------------------------------------------------------------------------------| ---
+`def y = x + 1` | [1*y - 1*x <= 1, -1*y + 1*x <= -1]                                                                                                                     | Traduit `y = x + 1`.
+`def z = y + 2` | [1*y - 1*x <= 1, -1*y + 1*x <= -1, 1*z - 1*y <= 2, -1*z + 1*y <= -2]                                                                                   | Ajoute `z = y + 2`.
+Fermeture | [1*z - 1*y <= 2, 1*z - 1*x <= 3, 1*y - 1*x <= 1, -1*y + 1*x <= -1, -1*z + 1*y <= -2, -1*z + 1*x <= -3]                                                 | Transitivité : `1*y - 1*x <= 1 et 1*z - 1*y <= 2 → 1*z - 1*x <= 3`, etc..
+`if (x <= z)` | [..., 1*x - 1*z <= 0]                                                                                                                                  | Ajoute la condition `x <= z`.
+Fermeture | [1*z - 1*y <= 2, 1*z - 1*x <= 3, 1*x - 1*z <= 0, 1*y - 1*z <= 1, 1*y - 1*x <= 1, 1*x - 1*y <= 2, -1*y + 1*x <= -1, -1*z + 1*y <= -2, -1*z + 1*x <= -3] | État après la condition, avec nouvelles déductions.
+`def w = z` | [..., 1*w - 1*z <= 0, -1*w + 1*z <= 0]                                                                                                                 | Traduit `w = z`.
+Fermeture | [..., 1*w - 1*x <= 3, 1*w - 1*y <= 2, -1*w + 1*z <= 0, -1*w + 1*y <= -2, -1*w + 1*x <= -3, -1*y + 1*x <= -1, -1*z + 1*y <= -2, -1*z + 1*x <= -3]       | Transitivité 
+Fin  | [1*z - 1*y <= 2, 1*z - 1*x <= 3, 1*x - 1*z <= 0, 1*y - 1*z <= 1, 1*y - 1*x <= 1, 1*x - 1*y <= 2, -1*y + 1*x <= -1, -1*z + 1*y <= -2, -1*z + 1*x <= -3] | Fusion(lub) et oubli de `w`.
+---
+
+#### Test 2 : `complex(a)`
+
+```java
+complex(a) {
+  def b = a + 1;
+  def c = b;
+  if (b <= c) {
+    c = a + 2;
+  }
+  def d = c + 1;
+}
+```
+
+Ligne | Contraintes ajoutées | Explication
+--- | --- | ---
+def b = a + 1 |	[1*b - 1*a <= 1, -1*b + 1*a <= -1] | Traduit b = a + 1.
+def c = b | [1*c - 1*b <= 0, 1*c - 1*a <= 1, 1*b - 1*a <= 1, -1*c + 1*b <= 0, -1*b + 1*a <= -1, -1*c + 1*a <= -1] | Ajoute c = b. Fermeture : 1*c - 1*b <= 0 et 1*b - 1*a <= 1 → 1*c - 1*a <= 1, etc.
+if (b <= c) | [1*b - 1*c <= 0, 1*c - 1*b <= 0, 1*c - 1*a <= 1, 1*b - 1*a <= 1, -1*c + 1*b <= 0, -1*b + 1*a <= -1, -1*c + 1*a <= -1] | Ajoute b <= c, cohérent avec c = b.
+Branche then : c = a + 2 | [1*b - 1*a <= 1, 1*c - 1*a <= 2, -1*b + 1*a <= -1, -1*c + 1*a <= -2] | project(c) oublie les contraintes sur c, puis ajoute c = a + 2.
+Branche else | [1*b - 1*c <= 0, 1*c - 1*b <= 0, 1*c - 1*a <= 1, 1*b - 1*a <= 1, -1*c + 1*b <= 0, -1*b + 1*a <= -1, -1*c + 1*a <= -1] | État inchangé (avant if).
+Fusion (lub) | BOTTOM |	Union inclut 1*c - 1*a <= 1 (de else) et -1*c + 1*a <= -2 (de then). Contradiction : 0 <= -1.
+def d = c + 1 | BOTTOM | L’état reste BOTTOM.
+---
+
+#### Limites actuelles
+- **Opérations complexes** : Se limite aux assignations additives et comparaisons : ComparisonLe, ComparisonGe. Pas de gestion de loop.
+- **Tests** : Tous les cas possibles du domaine n'ont pas été testés.
 
 ## Produit Cartésien : `ExtendedSignsTVPIProductDomain`
 
