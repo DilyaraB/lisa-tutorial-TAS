@@ -1,7 +1,7 @@
 
 # LiSA : Typage et Analyse Statique
 
-Ce projet a été réalisé en binôme par **Dilyara BABANAZAROVA** et **Floria LIM** dans le cadre du cours de TAS (2025). Le code source est disponible sur notre fork GitHub : [https://github.com/DilyaraB/lisa-tutorial-TAS](https://github.com/DilyaraB/lisa-tutorial-TAS). 
+Ce projet a été réalisé en binôme par **Dilyara BABANAZAROVA** (`DilyaraB`) et **Floria LIM** (`Azerall` ou `artifact` dans certains commits) dans le cadre du cours de TAS (2025).
 
 ## Aperçu du Projet
 
