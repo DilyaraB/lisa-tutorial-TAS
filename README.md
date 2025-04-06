@@ -263,8 +263,8 @@ La classe `ExtendedSignsTVPIProductDomain` (package `it.unive.lisa.tutorial`) im
 ### Fonctionnement
 - **Construction** : Le domaine est initialisé avec un `ValueEnvironment<ExtendedSigns>` (gestion des signes des variables) et un `TwoVarsLinearInequality` (ensemble de contraintes linéaires).
 - **Réduction** : La méthode `reduce()` effectue une passe unique pour maintenir la cohérence entre les deux domaines :
-  1. **Raffinement de `TwoVarsLinearInequality`** : Ajoute des contraintes unaires basées sur les signes actuels (ex. `x: ZERO` → `1*x ≤ 0` et `-1*x ≤ 0`, `x: POSITIVE` → `-1*x ≤ -1`).
-  2. **Raffinement de `ExtendedSigns`** : Analyse les contraintes unaires dans `TVPI` pour ajuster les signes (ex. si `1*x ≤ 0` et `-1*x ≤ 0`, alors `x: ZERO` ; si `-1*x ≤ -1` et pas de borne supérieure stricte, alors `x: POSITIVE`).
+  1. **Raffinement de `TwoVarsLinearInequality`** : Ajoute des contraintes unaires basées sur les signes actuels (ex. `x: ZERO` → `1*x <= 0` et `-1*x <= 0`, `x: POSITIVE` → `-1*x <= -1`).
+  2. **Raffinement de `ExtendedSigns`** : Analyse les contraintes unaires dans `TVPI` pour ajuster les signes (ex. si `1*x <= 0` et `-1*x <= 0`, alors `x: ZERO` ; si `-1*x <= -1` et pas de borne supérieure stricte, alors `x: POSITIVE`).
 - **Opérations sémantiques** : Les méthodes `assign`, `assume`, et `forgetIdentifier` délèguent les transformations aux domaines sous-jacents (`ExtendedSigns` et `TwoVarsLinearInequality`), suivies d’un appel à `reduce()` pour synchroniser les résultats.
 
 
@@ -288,11 +288,11 @@ test1(x) {
 
 Ligne | Résultat | Explication
 --- | --- | ---
-def y = x + 1 | ExtendedSigns: { x: TOP, y: TOP }, TVPI: [1\*y - 1\*x ≤ 1, -1\*y + 1\*x ≤ -1] | `y = x + 1` → contraintes linéaires, `x` et `y` restent indéfinis.
-def z = 0 | ExtendedSigns: { x: TOP, y: TOP, z: 0 }, TVPI: [-1\*z ≤ 0, 1\*y - 1\*x ≤ 1, 1\*z ≤ 0, -1\*y + 1\*x ≤ -1] | `z = 0` → `z: ZERO`, ajout de `1*z ≤ 0` et `-1*z ≤ 0`.
-if (y >= 1) | ExtendedSigns: { x: TOP, y: TOP, z: 0 }, TVPI: [-1\*z ≤ 0, 1\*y - 1\*x ≤ 1, 1\*z ≤ 0, -1\*y + 1\*x ≤ -1] | Condition `y >= 1` appliquée, mais `y: TOP` reste vague avant la branche.
-Branche then : z = 1 | ExtendedSigns: { x: TOP, y: +, z: + }, TVPI: [-1\*z ≤ -1, -1\*y ≤ -1, 1\*y - 1\*x ≤ 1, -1\*y + 1\*x ≤ -1] | `y >= 1` → `y: POSITIVE`, `z = 1` → `z: POSITIVE`, contraintes ajustées par `reduce()`.
-Fin | ExtendedSigns: { x: TOP, y: TOP, z: >=0 }, TVPI: [-1\*z ≤ -1, -1\*y ≤ -1, 1\*y - 1\*x ≤ 1, 1\*z ≤ 0, 1\*y ≤ 0, -1\*y + 1\*x ≤ -1] | Fusion entre `z: ZERO` (avant `if`) et `z: POSITIVE` (dans `if`) → `z: >=0`, `y` retombe à TOP.
+def y = x + 1 | ExtendedSigns: { x: TOP, y: TOP }, TVPI: [1\*y - 1\*x <= 1, -1\*y + 1\*x <= -1] | `y = x + 1` → contraintes linéaires, `x` et `y` restent indéfinis.
+def z = 0 | ExtendedSigns: { x: TOP, y: TOP, z: 0 }, TVPI: [-1\*z <= 0, 1\*y - 1\*x <= 1, 1\*z <= 0, -1\*y + 1\*x <= -1] | `z = 0` → `z: ZERO`, ajout de `1*z <= 0` et `-1*z <= 0`.
+if (y >= 1) | ExtendedSigns: { x: TOP, y: TOP, z: 0 }, TVPI: [-1\*z <= 0, 1\*y - 1\*x <= 1, 1\*z <= 0, -1\*y + 1\*x <= -1] | Condition `y >= 1` appliquée, mais `y: TOP` reste vague avant la branche.
+Branche then : z = 1 | ExtendedSigns: { x: TOP, y: +, z: + }, TVPI: [-1\*z <= -1, -1\*y <= -1, 1\*y - 1\*x <= 1, -1\*y + 1\*x <= -1] | `y >= 1` → `y: POSITIVE`, `z = 1` → `z: POSITIVE`, contraintes ajustées par `reduce()`.
+Fin | ExtendedSigns: { x: TOP, y: TOP, z: >=0 }, TVPI: [-1\*z <= -1, -1\*y <= -1, 1\*y - 1\*x <= 1, 1\*z <= 0, 1\*y <= 0, -1\*y + 1\*x <= -1] | Fusion entre `z: ZERO` (avant `if`) et `z: POSITIVE` (dans `if`) → `z: >=0`, `y` retombe à TOP.
 
 #### Test 2 : `test2()`
 
@@ -314,7 +314,7 @@ x = y + z | ExtendedSigns: { x: -, y: -, z: - }, TVPI: [1\*z <= -1, 1\*y <= -1, 
 Fin | ExtendedSigns: { x: -, y: -, z: - }, TVPI: [1\*z <= -1, 1\*y <= -1, 1\*x <= -1] | État final précis, pas de fusion.
 
 ### Commentaires
-Les résultats des tests montrent une bonne synchronisation entre `ExtendedSigns` et `TwoVarsLinearInequality` dans les cas linéaires simples, où les signes et contraintes restent cohérents sans branchement. Cependant, la méthode `reduce()` se concentre sur les contraintes unaires (ex. `x ≤ c`) uniquement, ce qui limite son efficacité pour utiliser des relations entre deux variables, comme `y - x ≤ 1`, afin d’affiner les signes.
+Les résultats des tests montrent une bonne synchronisation entre `ExtendedSigns` et `TwoVarsLinearInequality` dans les cas linéaires simples, où les signes et contraintes restent cohérents sans branchement. Cependant, la méthode `reduce()` se concentre sur les contraintes unaires (ex. `x <= c`) uniquement, ce qui limite son efficacité pour utiliser des relations entre deux variables, comme `y - x <= 1`, afin d’affiner les signes.
 
 ### Limites
 - Les boucles `while` ne sont pas gérées, car `TwoVarsLinearInequality` n’a pas été conçu pour analyser les programmes itératifs.
