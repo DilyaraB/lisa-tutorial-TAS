@@ -65,7 +65,7 @@ public class ExtendedSignsTVPIProductDomain extends ValueCartesianProduct<
             return new ExtendedSignsTVPIProductDomain(newLeft.bottom(), newRight.bottom());
         }
 
-        // Affine TwoVarsLinearInequality depuis ExtendedSigns
+        // Raffine TwoVarsLinearInequality depuis ExtendedSigns
         Set<TwoVarsLinearInequality.TwoVarsInequality> newConstraints = new HashSet<>(newRight.constraints);
         for (Identifier id : newLeft.getKeys()) {
             ExtendedSigns sign = newLeft.getState(id);
@@ -84,7 +84,7 @@ public class ExtendedSignsTVPIProductDomain extends ValueCartesianProduct<
         }
         newRight = new TwoVarsLinearInequality(newConstraints);
 
-        // Affine ExtendedSigns depuis TwoVarsLinearInequality
+        // Raffine ExtendedSigns depuis TwoVarsLinearInequality
         ValueEnvironment<ExtendedSigns> refinedLeft = newLeft;
         for (Identifier id : newLeft.getKeys()) {
             ExtendedSigns currentSign = newLeft.getState(id);
@@ -94,9 +94,9 @@ public class ExtendedSignsTVPIProductDomain extends ValueCartesianProduct<
             int lowerBound = Integer.MIN_VALUE;
             for (TwoVarsLinearInequality.TwoVarsInequality c : constraints) {
                 if (c.x != null && c.x.equals(id) && c.y == null) {
-                    if (c.a == 1) { // e.g., 1*x <= c
+                    if (c.a == 1) {
                         upperBound = Math.min(upperBound, c.c);
-                    } else if (c.a == -1) { // e.g., -1*x <= c => x >= -c
+                    } else if (c.a == -1) {
                         lowerBound = Math.max(lowerBound, -c.c);
                     }
                 }
@@ -105,15 +105,15 @@ public class ExtendedSignsTVPIProductDomain extends ValueCartesianProduct<
             ExtendedSigns refinedSign = currentSign;
             if (upperBound == 0 && lowerBound == 0) {
                 refinedSign = ExtendedSigns.ZERO;
-            } else if (lowerBound >= 1 && !currentSign.equals(ExtendedSigns.POSITIVE) && !currentSign.isTop()) {
+            } else if (lowerBound >= 1 && upperBound >= 1 && !currentSign.equals(ExtendedSigns.POSITIVE) && !currentSign.isTop()) {
                 refinedSign = ExtendedSigns.POSITIVE;
             } else if (upperBound <= -1 && lowerBound <= -1 && !currentSign.equals(ExtendedSigns.NEGATIVE) && !currentSign.isTop()) {
                 refinedSign = ExtendedSigns.NEGATIVE;
-            } else if (lowerBound >= 0 && upperBound > 0 && !currentSign.equals(ExtendedSigns.ZERO) &&
+            } else if (lowerBound >= 0 && upperBound >= 0 && !currentSign.equals(ExtendedSigns.ZERO) &&
                        !currentSign.equals(ExtendedSigns.POSITIVE) && !currentSign.equals(ExtendedSigns.GREATER_OR_EQUAL_ZERO) &&
                        !currentSign.isTop()) {
                 refinedSign = ExtendedSigns.GREATER_OR_EQUAL_ZERO;
-            } else if (upperBound <= 0 && lowerBound < 0 && !currentSign.equals(ExtendedSigns.ZERO) &&
+            } else if (upperBound <= 0 && lowerBound <= 0 && !currentSign.equals(ExtendedSigns.ZERO) &&
                        !currentSign.equals(ExtendedSigns.NEGATIVE) && !currentSign.equals(ExtendedSigns.LESS_OR_EQUAL_ZERO) &&
                        !currentSign.isTop()) {
                 refinedSign = ExtendedSigns.LESS_OR_EQUAL_ZERO;

@@ -1,29 +1,16 @@
 class extendedSignsTVPI {
     test1(x) {
-        def y = x + 1;
-        def z = y + 2;
-        if (x <= 0) {       
-            def w = z + y;
-        } else {
-            def w = z - y;
+    	def y = x + 1;
+        def z = 0;
+        if (y >= 1) {
+        	z = 1;
         }
     }
     
     test2() {
     	def x = 0;
-        def y = x + 1;
-        def z = -1;   
-        if (y >= 1) { 
-        	z = 0;
-        }
-    }
-    
-    test3() {
-        def y = 0;
-        def z = 0;
-        while (y < 10) {
-            y = y + 1;
-        }
-        z = y + 1; 
+        def y = x - 1;
+        def z = y + x; 
+        x = y + z;
     }
 }

@@ -15,7 +15,6 @@ import it.unive.lisa.symbolic.value.operator.AdditionOperator;
 import it.unive.lisa.symbolic.value.operator.binary.*;
 import it.unive.lisa.util.representation.StringRepresentation;
 import it.unive.lisa.util.representation.StructuredRepresentation;
-import org.apache.logging.log4j.util.SystemPropertiesPropertySource;
 
 import java.util.*;
 import java.util.function.Predicate;

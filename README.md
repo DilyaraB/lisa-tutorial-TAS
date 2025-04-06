@@ -136,8 +136,8 @@ def x = 0 | a→TOP, b→TOP, x→ZERO | a et b sont des paramètres.
 if (a > b) | a→TOP, b→TOP, x→ZERO | Satisfaction dépendant des valeurs de a et b.
 x = x * 7 | a→TOP, b→TOP, x→ZERO | ZERO * POSITIVE → ZERO.
 x = -7 | a→TOP, b→TOP, x→NEGATIVE | Assignation à -7 → NEGATIVE.
-def y = x / x | a→TOP, b→TOP, x→<=0,  BOTTOM | x → (<=0), donc y : (<=0) / (<=0) → BOTTOM.
-Fin | a→TOP, b→TOP, x→<=0,  BOTTOM | 
+def y = x / x | a→TOP, b→TOP, x→<=0, y→BOTTOM | x → (<=0), donc y : (<=0) / (<=0) → BOTTOM.
+Fin | a→TOP, b→TOP, x→<=0, y→BOTTOM | 
 
 - **Branche 2 (branche2)** :
 ```java
@@ -156,7 +156,7 @@ if (a > b) | a→TOP, b→TOP, x→POSITIVE | Satisfaction dépendant des valeur
 x = x * 7 | a→TOP, b→TOP, x→POSITIVE | POSITIVE * POSITIVE → POSITIVE.
 x = -7 | a→TOP, b→TOP, x→NEGATIVE | Assignation à -7 → NEGATIVE.
 def y = x / x | a→TOP, b→TOP, x→TOP, y→TOP | x → POSITIVE ou NEGATIVE → TOP, donc y = TOP / TOP → TOP.
-Fin | a→TOP, b→TOP, x→TOP,  y->TOP | 
+Fin | a→TOP, b→TOP, x→TOP, y→TOP | 
 
 #### Remarque sur branche2 : 
 Nous nous attendions au départ à ce que y soit POSITIVE, car x est soit POSITIVE soit NEGATIVE, et POSITIVE / POSITIVE = POSITIVE et NEGATIVE / NEGATIVE = POSITIVE, avec un lub de POSITIVE. Cependant, le résultat est TOP, car l’interprétation évalue d’abord x = lub(POSITIVE, NEGATIVE) → TOP, puis y = x / x = TOP / TOP → TOP. Nous n’avons pas su modifier l’ordre d’interprétation pour éviter cette approximation, cela reflète une limite dans notre implémentation.
@@ -166,7 +166,7 @@ Nous nous attendions au départ à ce que y soit POSITIVE, car x est soit POSITI
 
 Le domaine `TwoVarsLinearInequality` (classe `TwoVarsLinearInequality.java`, package `it.unive.lisa.tutorial`) est une implémentation simplifiée du domaine relationnel **TVPI** (*Two Variables Per Inequality*). Il permet de représenter des relations de la forme :
 
-    a * x + b * y ≤ c
+    a * x + b * y <= c
 
 où `x` et `y` sont des identifiants, `a`, `b` et `c` sont des constantes entières. Il capture ainsi des **relations linéaires entre deux variables** à chaque instant du programme.
 
@@ -176,27 +176,27 @@ Ce domaine maintient un ensemble de contraintes linéaires, fermé par transitiv
 
 ### Représentation
 - Une contrainte est un objet `TwoVarsInequality` avec les champs `a`, `x`, `b`, `y`, `c`.
-- Exemple : `x - y ≤ 2` devient `1*x + (-1)*y ≤ 2` (soit `a=1`, `x=x`, `b=-1`, `y=y`, `c=2`).
+- Exemple : `x - y <= 2` devient `1*x + (-1)*y <= 2` (soit `a=1`, `x=x`, `b=-1`, `y=y`, `c=2`).
 - L’état du domaine est :
   - Un ensemble de telles contraintes (état normal).
   - `TOP` : Toutes les valeurs possibles (ensemble vide de contraintes avec `isTop = true`).
-  - `BOTTOM` : État insatisfiable (singleton `{0 ≤ -1}`).
+  - `BOTTOM` : État insatisfiable (singleton `{0 <= -1}`).
 
 ### Opérations principales
 1. **Assignations (`assign`)**
-  - `x = y` : Ajoute `{x - y ≤ 0, y - x ≤ 0}`.
-  - `x = y + c` : Ajoute `{x - y ≤ c, y - x ≤ -c}`.
+  - `x = y` : Ajoute `{x - y <= 0, y - x <= 0}`.
+  - `x = y + c` : Ajoute `{x - y <= c, y - x <= -c}`.
   - Oublie les contraintes précédentes sur `x` via `project` avant d’ajouter les nouvelles.
 2. **Conditions (`assume`)**
-  - `x <= y` : Ajoute `{x - y ≤ 0}`.
-  - `x <= y + c` : Ajoute `{x - y ≤ c}`.
+  - `x <= y` : Ajoute `{x - y <= 0}`.
+  - `x <= y + c` : Ajoute `{x - y <= c}`.
 3. **Fermeture transitive (`computeClosure`)**
-  - Si `x - y ≤ c1` et `y - z ≤ c2`, alors `x - z ≤ c1 + c2`.
+  - Si `x - y <= c1` et `y - z <= c2`, alors `x - z <= c1 + c2`.
   - Vérifie la satisfiabilité et retourne `BOTTOM` si une contradiction est détectée.
 4. **Projection (`project`)**
   - Supprime toutes les contraintes impliquant un identifiant donné.
 5. **Satisfiabilité (`checkSatisfiability`)**
-  - Détecte les contradictions (ex. `c - a ≤ 1` et `-c + a ≤ -2` → `0 ≤ -1`).
+  - Détecte les contradictions (ex. `c - a <= 1` et `-c + a <= -2` → `0 <= -1`).
 6. **Élimination des redondances (`eliminateRedundancies`)**
   - Garde la contrainte la plus restrictive pour chaque paire `(x, y, a, b)`.
 
@@ -218,14 +218,14 @@ basic(x) {
 
 Ligne | Contraintes ajoutées                                                                                                                                   | Explication
 --- |--------------------------------------------------------------------------------------------------------------------------------------------------------| ---
-`def y = x + 1` | [1*y - 1*x <= 1, -1*y + 1*x <= -1]                                                                                                                     | Traduit `y = x + 1`.
-`def z = y + 2` | [1*y - 1*x <= 1, -1*y + 1*x <= -1, 1*z - 1*y <= 2, -1*z + 1*y <= -2]                                                                                   | Ajoute `z = y + 2`.
-Fermeture | [1*z - 1*y <= 2, 1*z - 1*x <= 3, 1*y - 1*x <= 1, -1*y + 1*x <= -1, -1*z + 1*y <= -2, -1*z + 1*x <= -3]                                                 | Transitivité : `1*y - 1*x <= 1 et 1*z - 1*y <= 2 → 1*z - 1*x <= 3`, etc..
-`if (x <= z)` | [..., 1*x - 1*z <= 0]                                                                                                                                  | Ajoute la condition `x <= z`.
-Fermeture | [1*z - 1*y <= 2, 1*z - 1*x <= 3, 1*x - 1*z <= 0, 1*y - 1*z <= 1, 1*y - 1*x <= 1, 1*x - 1*y <= 2, -1*y + 1*x <= -1, -1*z + 1*y <= -2, -1*z + 1*x <= -3] | État après la condition, avec nouvelles déductions.
-`def w = z` | [..., 1*w - 1*z <= 0, -1*w + 1*z <= 0]                                                                                                                 | Traduit `w = z`.
-Fermeture | [..., 1*w - 1*x <= 3, 1*w - 1*y <= 2, -1*w + 1*z <= 0, -1*w + 1*y <= -2, -1*w + 1*x <= -3, -1*y + 1*x <= -1, -1*z + 1*y <= -2, -1*z + 1*x <= -3]       | Transitivité 
-Fin  | [1*z - 1*y <= 2, 1*z - 1*x <= 3, 1*x - 1*z <= 0, 1*y - 1*z <= 1, 1*y - 1*x <= 1, 1*x - 1*y <= 2, -1*y + 1*x <= -1, -1*z + 1*y <= -2, -1*z + 1*x <= -3] | Fusion(lub) et oubli de `w`.
+def y = x + 1 | [1\*y - 1\*x <= 1, -1\*y + 1\*x <= -1]                                                                                                                     | Traduit `y = x + 1`.
+def z = y + 2 | [1\*y - 1\*x <= 1, -1\*y + 1\*x <= -1, 1\*z - 1\*y <= 2, -1\*z + 1\*y <= -2]                                                                              | Ajoute `z = y + 2`.
+Fermeture | [1\*z - 1\*y <= 2, 1\*z - 1\*x <= 3, 1\*y - 1\*x <= 1, -1\*y + 1\*x <= -1, -1\*z + 1\*y <= -2, -1\*z + 1\*x <= -3]                                                 | Transitivité : `1*y - 1*x <= 1 et 1*z - 1*y <= 2 → 1*z - 1*x <= 3`, etc..
+if (x <= z) | [..., 1\*x - 1\*z <= 0]                                                                                                                                  | Ajoute la condition `x <= z`.
+Fermeture | [1\*z - 1\*y <= 2, 1\*z - 1\*x <= 3, 1\*x - 1\*z <= 0, 1\*y - 1\*z <= 1, 1\*y - 1\*x <= 1, 1\*x - 1\*y <= 2, -1\*y + 1\*x <= -1, -1\*z + 1\*y <= -2, -1\*z + 1\*x <= -3] | État après la condition, avec nouvelles déductions.
+def w = z | [..., 1\*w - 1\*z <= 0, -1\*w + 1\*z <= 0]                                                                                                                 | Traduit `w = z`.
+Fermeture | [..., 1\*w - 1\*x <= 3, 1\*w - 1\*y <= 2, -1\*w + 1\*z <= 0, -1\*w + 1\*y <= -2, -1\*w + 1\*x <= -3, -1\*y + 1\*x <= -1, -1\*z + 1\*y <= -2, -1\*z + 1\*x <= -3]       | Transitivité 
+Fin  | [1\*z - 1\*y <= 2, 1\*z - 1\*x <= 3, 1\*x - 1\*z <= 0, 1\*y - 1\*z <= 1, 1\*y - 1\*x <= 1, 1\*x - 1\*y <= 2, -1\*y + 1\*x <= -1, -1\*z + 1\*y <= -2, -1\*z + 1\*x <= -3] | Fusion(lub) et oubli de `w`.
 ---
 
 #### Test 2 : `complex(a)`
@@ -243,12 +243,12 @@ complex(a) {
 
 Ligne | Contraintes ajoutées | Explication
 --- | --- | ---
-def b = a + 1 |	[1*b - 1*a <= 1, -1*b + 1*a <= -1] | Traduit b = a + 1.
-def c = b | [1*c - 1*b <= 0, 1*c - 1*a <= 1, 1*b - 1*a <= 1, -1*c + 1*b <= 0, -1*b + 1*a <= -1, -1*c + 1*a <= -1] | Ajoute c = b. Fermeture : 1*c - 1*b <= 0 et 1*b - 1*a <= 1 → 1*c - 1*a <= 1, etc.
-if (b <= c) | [1*b - 1*c <= 0, 1*c - 1*b <= 0, 1*c - 1*a <= 1, 1*b - 1*a <= 1, -1*c + 1*b <= 0, -1*b + 1*a <= -1, -1*c + 1*a <= -1] | Ajoute b <= c, cohérent avec c = b.
-Branche then : c = a + 2 | [1*b - 1*a <= 1, 1*c - 1*a <= 2, -1*b + 1*a <= -1, -1*c + 1*a <= -2] | project(c) oublie les contraintes sur c, puis ajoute c = a + 2.
-Branche else | [1*b - 1*c <= 0, 1*c - 1*b <= 0, 1*c - 1*a <= 1, 1*b - 1*a <= 1, -1*c + 1*b <= 0, -1*b + 1*a <= -1, -1*c + 1*a <= -1] | État inchangé (avant if).
-Fusion (lub) | BOTTOM |	Union inclut 1*c - 1*a <= 1 (de else) et -1*c + 1*a <= -2 (de then). Contradiction : 0 <= -1.
+def b = a + 1 |	[1\*b - 1\*a <= 1, -1\*b + 1\*a <= -1] | Traduit `b = a + 1`.
+def c = b | [1\*c - 1\*b <= 0, 1\*c - 1\*a <= 1, 1\*b - 1\*a <= 1, -1\*c + 1\*b <= 0, -1\*b + 1\*a <= -1, -1\*c + 1\*a <= -1] | Ajoute c = b. Fermeture : `1*c - 1*b <= 0` et `1*b - 1*a <= 1` → `1*c - 1*a <= 1`, etc.
+if (b <= c) | [1\*b - 1\*c <= 0, 1\*c - 1\*b <= 0, 1\*c - 1\*a <= 1, 1\*b - 1\*a <= 1, -1\*c + 1\*b <= 0, -1\*b + 1\*a <= -1, -1\*c + 1\*a <= -1] | Ajoute `b <= c`, cohérent avec `c = b`.
+Branche then : c = a + 2 | [1\*b - 1\*a <= 1, 1\*c - 1\*a <= 2, -1\*b + 1\*a <= -1, -1\*c + 1\*a <= -2] | project(c) oublie les contraintes sur `c`, puis ajoute `c = a + 2`.
+Branche else | [1\*b - 1\*c <= 0, 1\*c - 1\*b <= 0, 1\*c - 1\*a <= 1, 1\*b - 1\*a <= 1, -1\*c + 1\*b <= 0, -1\*b + 1\*a <= -1, -1\*c + 1\*a <= -1] | État inchangé (avant if).
+Fusion (lub) | BOTTOM |	Union inclut `1*c - 1*a <= 1` (de else) et `-1*c + 1*a <= -2` (de then). Contradiction : `0 <= -1`.
 def d = c + 1 | BOTTOM | L’état reste BOTTOM.
 ---
 
@@ -258,15 +258,15 @@ def d = c + 1 | BOTTOM | L’état reste BOTTOM.
 
 ## Produit Cartésien : `ExtendedSignsTVPIProductDomain`
 
-Le produit cartésien, implémenté dans la classe `ExtendedSignsTVPIProductDomain` (package `it.unive.lisa.tutorial`), combine le domaine non relationnel `ExtendedSigns` et le domaine relationnel `TwoVarsLinearInequality` via l’héritage de `ValueCartesianProduct`. La méthode `reduce()` tente de maintenir une cohérence entre les signes et les contraintes linéaires, mais hérite des approximations de `TwoVarsLinearInequality`.
+La classe `ExtendedSignsTVPIProductDomain` (package `it.unive.lisa.tutorial`) implémente un produit cartésien entre `ExtendedSigns` et `TwoVarsLinearInequality` via `ValueCartesianProduct`. La méthode `reduce()` assure une cohérence bidirectionnelle : elle traduit les signes en contraintes linéaires et ajuste les signes à partir des contraintes TVPI. Cependant, l’absence d’une méthode `lub` explicite limite la précision lors des fusions de branches.
 
 ### Fonctionnement
-- **Construction** : Le domaine est initialisé avec un `ValueEnvironment<ExtendedSigns>` (gestion des signes) et un `TwoVarsLinearInequality` (contraintes linéaires).
-- **Réduction** : La méthode `reduce()` effectue une passe unique pour raffiner les deux domaines :
-  1. **Raffinement de `TwoVarsLinearInequality`** : Ajoute des contraintes basées sur les signes (ex. `x >= 0` si `x: GREATER_OR_EQUAL_ZERO`).
-  2. **Raffinement de `ExtendedSigns`** : Calcule les bornes les plus strictes à partir des contraintes TVPI et ajuste les signes (ex. `x <= 0` et `x >= 0` → `x: ZERO`).
-  3. **Raffinement relationnel** : Exploite les inégalités à deux variables (ex. `x - y <= 0` → si `x: POSITIVE`, alors `y: GREATER_OR_EQUAL_ZERO`).
-- **Opérations sémantiques** : Les méthodes `assign`, `assume`, et `forgetIdentifier` appliquent les transformations sur chaque domaine, suivies d’un appel à `reduce()` pour maintenir la cohérence.
+- **Construction** : Le domaine est initialisé avec un `ValueEnvironment<ExtendedSigns>` (gestion des signes des variables) et un `TwoVarsLinearInequality` (ensemble de contraintes linéaires).
+- **Réduction** : La méthode `reduce()` effectue une passe unique pour maintenir la cohérence entre les deux domaines :
+  1. **Raffinement de `TwoVarsLinearInequality`** : Ajoute des contraintes unaires basées sur les signes actuels (ex. `x: ZERO` → `1*x ≤ 0` et `-1*x ≤ 0`, `x: POSITIVE` → `-1*x ≤ -1`).
+  2. **Raffinement de `ExtendedSigns`** : Analyse les contraintes unaires dans `TVPI` pour ajuster les signes (ex. si `1*x ≤ 0` et `-1*x ≤ 0`, alors `x: ZERO` ; si `-1*x ≤ -1` et pas de borne supérieure stricte, alors `x: POSITIVE`).
+- **Opérations sémantiques** : Les méthodes `assign`, `assume`, et `forgetIdentifier` délèguent les transformations aux domaines sous-jacents (`ExtendedSigns` et `TwoVarsLinearInequality`), suivies d’un appel à `reduce()` pour synchroniser les résultats.
+
 
 ---
 
@@ -274,60 +274,56 @@ Le produit cartésien, implémenté dans la classe `ExtendedSignsTVPIProductDoma
 
 Le fichier `extendedSignsTVPI.imp` teste le produit cartésien avec trois fonctions : `test1`, `test2`, et `test3`. Voici les résultats détaillés :
 
-#### `test1(x)`
+#### Test 1 : `test1()`
+
 ```java
 test1(x) {
     def y = x + 1;
-    def z = y + 2;
-    if (x <= 0) {       
-        def w = z + y;
-    } else {
-        def w = z - y;
+    def z = 0;
+    if (y >= 1) {
+    	z = 1;
     }
 }
 ```
 
-#### `test2()`
+Ligne | Résultat | Explication
+--- | --- | ---
+def y = x + 1 | ExtendedSigns: { x: TOP, y: TOP }, TVPI: [1\*y - 1\*x ≤ 1, -1\*y + 1\*x ≤ -1] | `y = x + 1` → contraintes linéaires, `x` et `y` restent indéfinis.
+def z = 0 | ExtendedSigns: { x: TOP, y: TOP, z: 0 }, TVPI: [-1\*z ≤ 0, 1\*y - 1\*x ≤ 1, 1\*z ≤ 0, -1\*y + 1\*x ≤ -1] | `z = 0` → `z: ZERO`, ajout de `1*z ≤ 0` et `-1*z ≤ 0`.
+if (y >= 1) | ExtendedSigns: { x: TOP, y: TOP, z: 0 }, TVPI: [-1\*z ≤ 0, 1\*y - 1\*x ≤ 1, 1\*z ≤ 0, -1\*y + 1\*x ≤ -1] | Condition `y >= 1` appliquée, mais `y: TOP` reste vague avant la branche.
+Branche then : z = 1 | ExtendedSigns: { x: TOP, y: +, z: + }, TVPI: [-1\*z ≤ -1, -1\*y ≤ -1, 1\*y - 1\*x ≤ 1, -1\*y + 1\*x ≤ -1] | `y >= 1` → `y: POSITIVE`, `z = 1` → `z: POSITIVE`, contraintes ajustées par `reduce()`.
+Fin | ExtendedSigns: { x: TOP, y: TOP, z: >=0 }, TVPI: [-1\*z ≤ -1, -1\*y ≤ -1, 1\*y - 1\*x ≤ 1, 1\*z ≤ 0, 1\*y ≤ 0, -1\*y + 1\*x ≤ -1] | Fusion entre `z: ZERO` (avant `if`) et `z: POSITIVE` (dans `if`) → `z: >=0`, `y` retombe à TOP.
+
+#### Test 2 : `test2()`
+
 ```java
 test2() {
     def x = 0;
-    def y = x + 1;
-    def z = -1;
-    if (y >= 1) {
-        z = 0;
-    }
+    def y = x - 1;
+    def z = y + x; 
+    x = y + z;
 }
 ```
 
-#### `test3()`
-```java
-test3() {
-    def y = 0;
-    def z = 0;
-    while (y < 10) {
-        y = y + 1;
-    }
-    z = y + 1;
-}
-```
+Ligne | Résultat | Explication
+--- | --- | ---
+def x = 0 | ExtendedSigns: { x: 0 }, TVPI: [-1\*x <= 0, 1\*x <= 0] | `x = 0` → `x: ZERO`.
+def y = x - 1 | ExtendedSigns: { x: 0, y: - }, TVPI: [-1\*x <= 0, 1\*y <= -1, 1\*x <= 0] | `y = -1` → `y: -`, `reduce()` déduit `y <= -1`.
+def z = y + x | ExtendedSigns: { x: 0, y: -, z: - }, TVPI: [-1\*x <= 0, 1\*z <= -1, 1\*y <= -1, 1\*x <= 0] | `z = -1 + 0` → `z: -`, `1*z <= -1`.
+x = y + z | ExtendedSigns: { x: -, y: -, z: - }, TVPI: [1\*z <= -1, 1\*y <= -1, 1\*x <= -1] | `x = -1 + -1` → `x: -`, contraintes cohérentes.
+Fin | ExtendedSigns: { x: -, y: -, z: - }, TVPI: [1\*z <= -1, 1\*y <= -1, 1\*x <= -1] | État final précis, pas de fusion.
 
-### Résultats des tests
-Les résultats des tests dans `extendedSignsTVPI.imp` révèlent les comportements suivants :  
-- **test1(x)** : Les relations initiales, telles que `z - x ≤ 3`, sont correctement déduites. Toutefois, la fusion des branches via `lub` intègre des contraintes incohérentes (par exemple, `y ≤ 1` et `y ≥ 2`), en raison de l’absence d’une vérification de satisfiabilité robuste dans `TwoVarsLinearInequality`.  
-- **test2()** : L’analyse est précise pour `x: 0` et `y: +`, mais la valeur finale de `z` est surapproximée à `<=0` au lieu de `0`. Cela découle d’une gestion insuffisante des constantes dans `assume` (par exemple, `y >= 1` ne renforce pas `y = 1`), permettant la persistance de contraintes erronées comme `y ≤ 0`.  
-- **test3()** : La boucle `while (y < 10)` est mal interprétée, la condition `y < 10` n’étant pas traduite en une contrainte telle que `y ≤ 9`. De plus, le `widening` inefficace conduit à une accumulation de contraintes incorrectes (par exemple, `y ≥ 20`), au lieu de stabiliser la borne à `y ≤ 10`.
+### Commentaires
+Les résultats des tests montrent une bonne synchronisation entre `ExtendedSigns` et `TwoVarsLinearInequality` dans les cas linéaires simples, où les signes et contraintes restent cohérents sans branchement. Cependant, la méthode `reduce()` se concentre sur les contraintes unaires (ex. `x ≤ c`) uniquement, ce qui limite son efficacité pour utiliser des relations entre deux variables, comme `y - x ≤ 1`, afin d’affiner les signes.
 
-## Améliorations et limites
+### Limites
+- Les boucles `while` ne sont pas gérées, car `TwoVarsLinearInequality` n’a pas été conçu pour analyser les programmes itératifs.
+- De même, les opérations complexes (ex. multiplication, division) ne sont pas prises en charge dans les assignations, car `TwoVarsLinearInequality` se limite aux transformations additives.
 
-- **Contributions positives** :  
-  - L’abstraction des signes par `ExtendedSigns` est correctement intégrée.  
-  - Certaines relations linéaires sont capturées avec succès dans des cas simples.  
-- **Limites** :  
-  - Les approximations de `TwoVarsLinearInequality`, notamment l’absence de vérification de satisfiabilité, la gestion lacunaire des constantes, et un `widening` inadapté, entraînent des surapproximations significatives.  
-  - Ces limitations se répercutent sur les analyses impliquant des fusions ou des boucles, réduisant la précision globale.
-  
 ## Conclusion
 
-Ce projet s’est révélé exigeant sur le plan technique et conceptuel. L’objectif d’implémenter une version précise de `TwoVarsLinearInequality` n’a pu être pleinement atteint en raison de sa complexité inhérente. Les tentatives d’amélioration ont souvent conduit à des résultats partiellement fonctionnels, mais introduisaient des incohérences ailleurs, rendant difficile l’identification précise des sources d’erreur. 
+Ce projet a été un défi technique significatif. L’objectif d’implémenter une version précise de `TwoVarsLinearInequality` n’a pu être pleinement atteint en raison de sa complexité inhérente. Bien que nous ayons implémenté avec succès `ExtendedSigns`, offrant une abstraction robuste des signes, et implémenté `TwoVarsLinearInequality` avec une fermeture transitive et une vérification de satisfiabilité, la précision globale reste limitée. Le produit cartésien `ExtendedSignsTVPIProductDomain` combine efficacement les deux domaines dans des cas simples, et constitue une avancée notable. 
 
-Au final, l’analyse produite constitue une surapproximation opérationnelle, bien que perfectible. Malgré ces obstacles, cette expérience a offert une opportunité précieuse d’approfondir notre compréhension de l’analyse statique et des interactions entre domaines dans un cadre comme LiSA.
+Au final, l’analyse produite constitue une surapproximation opérationnelle mais insuffisante. Les tentatives d’amélioration ont souvent conduit à des résultats partiellement fonctionnels, mais introduisaient des incohérences ailleurs, rendant difficile l’identification précise des sources d’erreur. 
+
+Cette expérience a offert une opportunité précieuse d’approfondir notre compréhension de l’analyse statique et des interactions entre domaines dans un cadre comme LiSA, posant les bases pour des améliorations futures.
